@@ -1,0 +1,31 @@
+# Homelab integration: app is private on NPM's Docker network; no host UI port.
+services:
+  worldmonitor:
+    ports: !reset []
+    networks:
+      - default
+      - npm_proxy
+    environment:
+      # Local-only OpenAI-compatible endpoint; no intelligence prompts leave the homelab.
+      LLM_API_URL: "http://172.17.0.1:11434/v1/chat/completions"
+      LLM_MODEL: "qwen2.5:7b-instruct-q4_k_m"
+  credential-service:
+    networks:
+      - default
+      - npm_proxy
+  ais-relay:
+    environment:
+      # Required by relay auth and app warm-pings; app receives the matching
+      # WORLDMONITOR_RELAY_KEY from the base Compose service.
+      RELAY_SHARED_SECRET: "${RELAY_SHARED_SECRET:?RELAY_SHARED_SECRET required}"
+      WORLDMONITOR_RELAY_KEY: "${WORLDMONITOR_RELAY_KEY:?WORLDMONITOR_RELAY_KEY required}"
+
+networks:
+  # Docker's automatic pools are exhausted on this host. This dedicated /28 was
+  # checked against every Docker network and host route before assignment.
+  default:
+    ipam:
+      config:
+        - subnet: 10.254.9.0/28
+  npm_proxy:
+    external: true

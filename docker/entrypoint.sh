@@ -13,11 +13,12 @@ if [ -d /run/secrets ]; then
   done
 fi
 
+# Load allowlisted operator-managed credentials without printing them. The Node
+# bridge then execs supervisord with the resulting environment.
 export LOCAL_API_PORT="${LOCAL_API_PORT:-46123}"
 if [ -z "${LOCAL_API_TOKEN:-}" ]; then
   LOCAL_API_TOKEN="$(node -e "console.log(require('node:crypto').randomBytes(32).toString('base64url'))")"
   export LOCAL_API_TOKEN
 fi
-
 envsubst '$LOCAL_API_PORT $LOCAL_API_TOKEN' < /etc/nginx/nginx.conf.template > /tmp/nginx.conf
-exec /usr/bin/supervisord -c /etc/supervisor/conf.d/worldmonitor.conf
+exec node /app/start-supervisor.mjs
