@@ -197,17 +197,23 @@ if (RELAY_SHARED_SECRET && ALLOW_UNAUTHENTICATED_RELAY) {
 // ─────────────────────────────────────────────────────────────
 const UPSTASH_REDIS_REST_URL = process.env.UPSTASH_REDIS_REST_URL || '';
 const UPSTASH_REDIS_REST_TOKEN = process.env.UPSTASH_REDIS_REST_TOKEN || '';
+// Docker's redis-rest proxy is on the private Compose network. Permit HTTP
+// only when the operator explicitly opts in; all other deployments retain the
+// upstream HTTPS-only default.
+const UPSTASH_ALLOW_INSECURE_HTTP = process.env.UPSTASH_ALLOW_INSECURE_HTTP === 'true';
+const UPSTASH_URL_IS_ALLOWED = UPSTASH_REDIS_REST_URL.startsWith('https://')
+  || (UPSTASH_ALLOW_INSECURE_HTTP && UPSTASH_REDIS_REST_URL.startsWith('http://'));
 const UPSTASH_ENABLED = !!(
   UPSTASH_REDIS_REST_URL &&
   UPSTASH_REDIS_REST_TOKEN &&
-  UPSTASH_REDIS_REST_URL.startsWith('https://')
+  UPSTASH_URL_IS_ALLOWED
 );
 const RELAY_ENV_PREFIX = process.env.RELAY_ENV ? `${process.env.RELAY_ENV}:` : '';
 const OREF_REDIS_KEY = `${RELAY_ENV_PREFIX}relay:oref:history:v1`;
 const CHROME_UA = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36';
 
-if (UPSTASH_REDIS_REST_URL && !UPSTASH_REDIS_REST_URL.startsWith('https://')) {
-  console.warn('[Relay] UPSTASH_REDIS_REST_URL must start with https:// — Redis disabled');
+if (UPSTASH_REDIS_REST_URL && !UPSTASH_URL_IS_ALLOWED) {
+  console.warn('[Relay] UPSTASH_REDIS_REST_URL must use HTTPS (or set UPSTASH_ALLOW_INSECURE_HTTP=true for a private Docker proxy) — Redis disabled');
 }
 if (UPSTASH_ENABLED) {
   console.log(`[Relay] Upstash Redis enabled (key: ${OREF_REDIS_KEY})`);
@@ -3882,7 +3888,8 @@ async function startClassifySeedLoop() {
 // so service statuses are always cached (TTL is 30 min).
 // ─────────────────────────────────────────────────────────────
 const SERVICE_STATUSES_SEED_INTERVAL_MS = 15 * 60 * 1000; // 15 min (TTL/2)
-const SERVICE_STATUSES_RPC_URL = 'https://api.worldmonitor.app/api/infrastructure/v1/list-service-statuses';
+const WORLDMONITOR_API_BASE_URL = (process.env.WORLDMONITOR_API_BASE_URL || 'https://api.worldmonitor.app').replace(/\/+$/, '');
+const SERVICE_STATUSES_RPC_URL = `${WORLDMONITOR_API_BASE_URL}/api/infrastructure/v1/list-service-statuses`;
 
 async function seedServiceStatuses() {
   try {
@@ -4497,7 +4504,7 @@ function warmPingHeaders(extra = {}) {
 // keeps CDN caching from hiding the handler from the warm-ping loop.
 // ─────────────────────────────────────────────────────────────
 const CII_WARM_PING_INTERVAL_MS = 8 * 60 * 1000; // 8 min (live cache TTL is 10 min)
-const CII_RPC_URL = 'https://api.worldmonitor.app/api/intelligence/v1/get-risk-scores';
+const CII_RPC_URL = `${WORLDMONITOR_API_BASE_URL}/api/intelligence/v1/get-risk-scores`;
 
 function ciiWarmPingUrl() {
   return `${CII_RPC_URL}?_wm_warm_ping=${Date.now()}`;
@@ -4533,7 +4540,7 @@ function startCiiWarmPingLoop() {
 // Interval matches health.js maxStaleMin (60 min) with a 2× margin.
 // ─────────────────────────────────────────────────────────────
 const CHOKEPOINT_WARM_PING_INTERVAL_MS = 30 * 60 * 1000; // 30 min
-const CHOKEPOINT_RPC_URL = 'https://api.worldmonitor.app/api/supply-chain/v1/get-chokepoint-status';
+const CHOKEPOINT_RPC_URL = `${WORLDMONITOR_API_BASE_URL}/api/supply-chain/v1/get-chokepoint-status`;
 
 async function seedChokepointWarmPing() {
   try {
@@ -4568,7 +4575,7 @@ function startChokepointWarmPingLoop() {
 // seed-meta on every live fetch; we just need to call it regularly.
 // ─────────────────────────────────────────────────────────────
 const CABLE_HEALTH_WARM_PING_INTERVAL_MS = 30 * 60 * 1000; // 30 min
-const CABLE_HEALTH_RPC_URL = 'https://api.worldmonitor.app/api/infrastructure/v1/get-cable-health';
+const CABLE_HEALTH_RPC_URL = `${WORLDMONITOR_API_BASE_URL}/api/infrastructure/v1/get-cable-health`;
 
 async function seedCableHealthWarmPing() {
   try {
