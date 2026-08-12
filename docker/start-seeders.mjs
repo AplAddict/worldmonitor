@@ -20,8 +20,10 @@ const scripts = [
   'seed-weather-alerts.mjs',
   'seed-natural-events.mjs',
   'seed-cyber-threats.mjs',
+  // seed-economy.mjs already refreshes the configured FRED series together
+  // with its energy/macro contract. There is no standalone seed-fred-rates.mjs
+  // in this fork, so listing it here created a false degraded run.
   'seed-economy.mjs',
-  'seed-fred-rates.mjs',
   'seed-eia-petroleum.mjs',
   'seed-market-quotes.mjs',
   'seed-earnings-calendar.mjs',
@@ -51,4 +53,7 @@ for (const script of scripts) {
   }
 }
 console.log(JSON.stringify({ event: 'worldmonitor_seeders_complete', ok, degraded, timestamp: new Date().toISOString() }));
-process.exit(ok > 0 ? 0 : 1);
+// A partial run must be visible to systemd/timers. Cacheable sources may still
+// have refreshed successfully, but masking a degraded member as success defeats
+// the scheduler's health contract.
+process.exit(degraded === 0 && ok > 0 ? 0 : 1);
