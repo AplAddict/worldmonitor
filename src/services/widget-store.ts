@@ -1,8 +1,6 @@
 import { loadFromStorage, saveToStorage } from '@/utils';
 import { clearPanelColSpanEntry, clearPanelSpanEntry } from '@/utils/panel-storage';
 import { sanitizeWidgetHtml } from '@/utils/widget-sanitizer';
-import { getAuthState } from '@/services/auth-state';
-import { isEntitled } from '@/services/entitlements';
 import {
   clearLegacyKeyStorage,
   migrateLegacyKeysToHttpOnlySession,
