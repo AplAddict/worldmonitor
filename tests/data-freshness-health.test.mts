@@ -260,6 +260,20 @@ describe('health freshness ingestion', () => {
     assert.equal(bls?.lastUpdate?.toISOString(), new Date(checkedAtMs - 90 * 60_000).toISOString());
   });
 
+  it('keeps unavailable and disabled source states visible in the strategic-risk freshness surface', () => {
+    const panelSrc = readFileSync(resolve(repoRoot, 'src/components/StrategicRiskPanel.ts'), 'utf8');
+    assert.doesNotMatch(
+      panelSrc,
+      /\.filter\(source\s*=>\s*source\.status\s*!==\s*'no_data'\s*&&\s*source\.status\s*!==\s*'disabled'\)/,
+      'source-health UI must not hide unavailable or disabled sources',
+    );
+    assert.match(
+      panelSrc,
+      /risk-source-state/,
+      'source-health UI must state the actual source condition rather than relying on an icon alone',
+    );
+  });
+
   it('polls health freshness from the app scheduler instead of StrategicRiskPanel', () => {
     const appSrc = readFileSync(resolve(repoRoot, 'src/App.ts'), 'utf8');
     const panelSrc = readFileSync(resolve(repoRoot, 'src/components/StrategicRiskPanel.ts'), 'utf8');

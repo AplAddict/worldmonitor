@@ -14696,20 +14696,40 @@ a.prediction-link:hover {
 
 /* Compact source chips */
 .risk-sources-compact {
-  display: flex;
-  flex-wrap: wrap;
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(190px, 1fr));
   gap: 4px;
+  max-height: 168px;
+  overflow-y: auto;
+  padding-right: 2px;
 }
 
 .risk-source-chip {
-  display: flex;
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
   align-items: center;
-  gap: 4px;
-  padding: 3px 8px;
+  column-gap: 5px;
+  row-gap: 1px;
+  padding: 4px 7px;
   background: var(--overlay-subtle);
-  border-radius: 12px;
+  border-radius: 7px;
   border: 1px solid;
   font-size: 9px;
+}
+
+.risk-source-chip .risk-source-state {
+  grid-column: 2;
+  color: var(--text-dim);
+  font-size: 8px;
+  text-transform: capitalize;
+}
+
+.risk-source-chip .risk-source-time {
+  grid-column: 3;
+  grid-row: 1 / span 2;
+  color: var(--text-dim);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
 }
 
 .risk-source-dot {

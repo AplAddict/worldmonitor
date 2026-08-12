@@ -420,26 +420,35 @@ export class StrategicRiskPanel extends Panel {
     `;
   }
 
+  private sourceHealthLabel(source: DataSourceState): string {
+    if (source.healthStatus) return source.healthStatus.replace(/_/g, ' ').toLowerCase();
+    switch (source.status) {
+      case 'no_data': return 'unavailable';
+      case 'very_stale': return 'very stale';
+      default: return source.status;
+    }
+  }
+
   private renderFreshnessSurface(): string {
     if (!this.freshnessSummary) return '';
+    // Health is an evidence surface: show every registered source, including
+    // disabled/no-data ones, rather than making an incomplete feed look clean.
     const sources = dataFreshness.getAllSources()
-      .filter(source => source.status !== 'no_data' && source.status !== 'disabled')
       .sort((a, b) => {
-        const order: Record<string, number> = { error: 0, very_stale: 1, stale: 2, fresh: 3 };
-        return (order[a.status] ?? 4) - (order[b.status] ?? 4);
-      })
-      .slice(0, 6);
+        const order: Record<string, number> = { error: 0, no_data: 1, disabled: 2, very_stale: 3, stale: 4, fresh: 5 };
+        return (order[a.status] ?? 6) - (order[b.status] ?? 6);
+      });
 
-    if (sources.length === 0) return '';
     return `
       <div class="risk-section">
-        <div class="risk-section-title">${t('components.strategicRisk.dataFreshness')}</div>
+        <div class="risk-section-title">${t('components.strategicRisk.dataFreshness')} · ${this.freshnessSummary.activeSources}/${this.freshnessSummary.totalSources} active · ${this.freshnessSummary.errorSources} errors</div>
         <div class="risk-sources-compact">
           ${sources.map(source => `
             <span class="risk-source-chip" title="${escapeHtml(source.healthStatus || source.status)}" style="border-color: ${getStatusColor(source.status)}">
               <span class="risk-source-dot" style="color: ${getStatusColor(source.status)}">${getStatusIcon(source.status)}</span>
               <span class="risk-source-name">${escapeHtml(source.name)}</span>
-              <span class="risk-source-time">${escapeHtml(dataFreshness.getTimeSince(source.id))}</span>
+              <span class="risk-source-state">${escapeHtml(this.sourceHealthLabel(source))}</span>
+              <span class="risk-source-time">${source.status === 'no_data' ? 'no timestamp' : escapeHtml(dataFreshness.getTimeSince(source.id))}</span>
             </span>
           `).join('')}
         </div>
