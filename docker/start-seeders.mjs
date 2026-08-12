@@ -12,6 +12,10 @@ try {
   if (error?.code !== 'ENOENT') throw error;
 }
 
+// This host owns the Redis cache used by the self-hosted dashboard. Keep every
+// panel's producer here; omitting a producer makes the UI truthfully look empty
+// forever even while the application container is healthy. Long-running GDELT
+// remains freshness-gated below, so it normally runs only on its 6-hour cadence.
 const scripts = [
   'seed-portwatch.mjs',
   'seed-portwatch-disruptions.mjs',
@@ -20,6 +24,13 @@ const scripts = [
   'seed-weather-alerts.mjs',
   'seed-natural-events.mjs',
   'seed-cyber-threats.mjs',
+  // Intelligence / security producers consumed by the named panels.
+  'seed-security-advisories.mjs',
+  'seed-unrest-events.mjs',
+  'seed-internet-outages.mjs',
+  'seed-military-flights.mjs',
+  'seed-cross-source-signals.mjs',
+  'seed-correlation.mjs',
   // seed-economy.mjs already refreshes the configured FRED series together
   // with its energy/macro contract. There is no standalone seed-fred-rates.mjs
   // in this fork, so listing it here created a false degraded run.

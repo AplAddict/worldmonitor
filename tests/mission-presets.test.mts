@@ -657,6 +657,20 @@ describe('mission preset definitions', () => {
     assert.ok(preset.layers.includes('conflicts'));
     assert.ok(preset.layers.includes('flights'));
   });
+
+  it('defines Stock Geek as an equity decision desk, not a generic crypto workspace', () => {
+    const preset = getMissionPreset('macro-market-watch');
+    assert.ok(preset);
+    assert.equal(preset.timeRange, '24h');
+    assert.deepEqual(preset.panels.slice(0, 8), [
+      'map', 'markets', 'stock-analysis', 'daily-market-brief', 'markets-news',
+      'earnings-calendar', 'economic-calendar', 'market-breadth',
+    ]);
+    assert.ok(preset.panels.includes('derivatives'));
+    assert.ok(preset.panels.includes('sanctions-pressure'));
+    assert.equal(preset.panels.includes('crypto'), false);
+    assert.equal(preset.panels.includes('stablecoins'), false);
+  });
 });
 
 describe('applyMissionPresetToState', () => {
@@ -1199,7 +1213,7 @@ describe('mission preset shell integration', () => {
     await waitForMissionTimers();
 
     assert.equal(ctx.panelSettings.markets?.enabled, true);
-    assert.deepEqual(callbacks.appliedOrders[0]?.slice(0, 4), ['markets', 'heatmap', 'market-breadth', 'earnings-calendar']);
+    assert.deepEqual(callbacks.appliedOrders[0]?.slice(0, 4), ['markets', 'stock-analysis', 'daily-market-brief', 'earnings-calendar']);
     assert.equal(localStorage.getItem(MISSION_PRESET_STORAGE_KEY), null);
 
     assert.doesNotThrow(() => manager.resetMissionPreset());
