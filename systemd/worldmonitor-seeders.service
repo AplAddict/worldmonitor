@@ -1,6 +1,7 @@
 [Unit]
 Description=Refresh self-hosted World Monitor source caches
 Wants=network-online.target
+Requires=docker.service
 After=network-online.target docker.service
 
 [Service]

@@ -1978,6 +1978,113 @@ test('traffic log strips query strings from entries to protect privacy', async (
   }
 });
 
+test('invest watchlist serves only a fresh validated symbol-only mirror', async () => {
+  const localApi = await setupApiDir({});
+  const mirrorDir = await mkdtemp(path.join(os.tmpdir(), 'wm-invest-mirror-'));
+  const mirrorPath = path.join(mirrorDir, 'invest-watchlist.json');
+  const sourceUpdatedAt = new Date().toISOString();
+  await writeFile(mirrorPath, JSON.stringify({
+    schemaVersion: 1,
+    source: 'invest-dashboard',
+    mode: 'read_only_holdings_mirror',
+    status: 'ok',
+    sourceUpdatedAt,
+    publishedAt: sourceUpdatedAt,
+    maxAgeSeconds: 86400,
+    symbols: ['AAPL', 'MSFT', 'AAPL'],
+    forbiddenPortfolioField: 123,
+  }), 'utf8');
+  const app = await createLocalApiServer({
+    port: 0,
+    apiDir: localApi.apiDir,
+    investWatchlistPath: mirrorPath,
+    logger: { log() { }, warn() { }, error() { } },
+  });
+  const { port } = await app.start();
+
+  try {
+    const response = await authFetch(`http://127.0.0.1:${port}/api/invest-watchlist`);
+    assert.equal(response.status, 200);
+    const body = await response.json();
+    assert.deepEqual(body.symbols, ['AAPL', 'MSFT']);
+    assert.equal(body.forbiddenPortfolioField, undefined);
+    assert.equal(body.status, 'ok');
+  } finally {
+    await app.close();
+    await localApi.cleanup();
+    await rm(mirrorDir, { recursive: true, force: true });
+  }
+});
+
+test('invest watchlist rejects producer-controlled excessive freshness TTLs', async () => {
+  const localApi = await setupApiDir({});
+  const mirrorDir = await mkdtemp(path.join(os.tmpdir(), 'wm-invest-mirror-'));
+  const mirrorPath = path.join(mirrorDir, 'invest-watchlist.json');
+  await writeFile(mirrorPath, JSON.stringify({
+    schemaVersion: 1,
+    source: 'invest-dashboard',
+    mode: 'read_only_holdings_mirror',
+    status: 'ok',
+    sourceUpdatedAt: '2020-01-01T00:00:00Z',
+    maxAgeSeconds: 9999999999,
+    symbols: ['AAPL'],
+  }), 'utf8');
+  const app = await createLocalApiServer({
+    port: 0,
+    apiDir: localApi.apiDir,
+    investWatchlistPath: mirrorPath,
+    logger: { log() { }, warn() { }, error() { } },
+  });
+  const { port } = await app.start();
+
+  try {
+    const response = await authFetch(`http://127.0.0.1:${port}/api/invest-watchlist`);
+    assert.equal(response.status, 503);
+    const body = await response.json();
+    assert.equal(body.status, 'unavailable');
+    assert.deepEqual(body.symbols, []);
+  } finally {
+    await app.close();
+    await localApi.cleanup();
+    await rm(mirrorDir, { recursive: true, force: true });
+  }
+});
+
+test('invest watchlist fails closed for stale or malformed mirror data', async () => {
+  const localApi = await setupApiDir({});
+  const mirrorDir = await mkdtemp(path.join(os.tmpdir(), 'wm-invest-mirror-'));
+  const mirrorPath = path.join(mirrorDir, 'invest-watchlist.json');
+  await writeFile(mirrorPath, JSON.stringify({
+    schemaVersion: 1,
+    source: 'invest-dashboard',
+    mode: 'read_only_holdings_mirror',
+    status: 'stale',
+    sourceUpdatedAt: '2020-01-01T00:00:00Z',
+    maxAgeSeconds: 86400,
+    symbols: ['AAPL'],
+    error: 'source_snapshot_stale',
+  }), 'utf8');
+  const app = await createLocalApiServer({
+    port: 0,
+    apiDir: localApi.apiDir,
+    investWatchlistPath: mirrorPath,
+    logger: { log() { }, warn() { }, error() { } },
+  });
+  const { port } = await app.start();
+
+  try {
+    const response = await authFetch(`http://127.0.0.1:${port}/api/invest-watchlist`);
+    assert.equal(response.status, 503);
+    const body = await response.json();
+    assert.equal(body.status, 'stale');
+    assert.deepEqual(body.symbols, []);
+  } finally {
+    await app.close();
+    await localApi.cleanup();
+    await rm(mirrorDir, { recursive: true, force: true });
+  }
+});
+
 test('service-status reports bound fallback port after EADDRINUSE recovery', async () => {
   const blocker = createServer((_req, res) => {
     res.writeHead(200, { 'content-type': 'text/plain' });

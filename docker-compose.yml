@@ -56,6 +56,9 @@ services:
       # Server-owned provider values and control token, never served as static files.
       - provider-credentials:/run/worldmonitor-credentials:ro
       - provider-credential-control:/run/worldmonitor-credential-control:ro
+      # Sanitized symbol-only handoff from Invest Dashboard. This is a distinct
+      # host path and is mounted read-only; it never exposes portfolio artifacts.
+      - /srv/appdata/worldmonitor-runtime:/run/worldmonitor-invest:ro
     # Docker secrets (recommended for API keys — keeps them out of docker inspect).
     # Create secrets/ dir with one file per key, then uncomment below.
     # See SELF_HOSTING.md or docker-compose.override.yml for details.

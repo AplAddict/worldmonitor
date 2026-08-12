@@ -8,6 +8,8 @@
  */
 
 import {
+  fetchInvestWatchlistMirror,
+  formatInvestMirrorStatus,
   getMarketWatchlistEntries,
   resetMarketWatchlist,
   setMarketWatchlistEntries,
@@ -53,6 +55,9 @@ export function openWatchlistModal(): void {
         panel and lead the Premium Stock Analysis, Backtesting and Daily Market
         Brief panels. PRO members get every ticker in the list reported (up to 50).
       </div>
+      <div id="wmInvestMirrorStatus" role="status" aria-live="polite" style="margin-bottom:12px;padding:9px 10px;border:1px solid var(--border);border-radius:9px;background:rgba(255,255,255,0.025);color:var(--text-dim);font-size:12px">
+        Checking Invest Dashboard mirror…
+      </div>
       <div id="wmWatchlistEditorMount"></div>
       <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:16px">
         <button type="button" class="panels-reset-layout" id="wmMarketResetBtn">Reset</button>
@@ -64,6 +69,17 @@ export function openWatchlistModal(): void {
 
   modal.querySelector('.modal-close')?.addEventListener('click', close);
   modal.querySelector<HTMLDivElement>('#wmWatchlistEditorMount')?.append(editor.element);
+  const investMirrorStatus = modal.querySelector<HTMLDivElement>('#wmInvestMirrorStatus');
+  void fetchInvestWatchlistMirror().then((mirror) => {
+    if (!investMirrorStatus || activeOverlay !== overlay) return;
+    investMirrorStatus.textContent = formatInvestMirrorStatus(mirror);
+    if (mirror.status === 'ok' && mirror.sourceUpdatedAt) {
+      const updated = new Date(mirror.sourceUpdatedAt);
+      if (!Number.isNaN(updated.getTime())) {
+        investMirrorStatus.textContent += ` · updated ${updated.toLocaleString()}`;
+      }
+    }
+  });
 
   overlay.appendChild(modal);
   document.body.appendChild(overlay);

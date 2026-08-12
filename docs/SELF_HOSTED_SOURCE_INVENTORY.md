@@ -14,9 +14,9 @@
 | Browser session bootstrap | protected | `/api/wm-session` returns Authentik redirect (`302`) without a session |
 | Credential status route | protected | `/operator-credentials-api/status` returns Authentik redirect (`302`) without a session |
 | Credentials boundary | private named volumes | credential service is sole writer; consumers mount read-only |
-| Scheduled producer | enabled | `worldmonitor-seeders.timer`, every six hours with up to ten-minute randomized delay |
+| Scheduled producer | enabled | `worldmonitor-seeders.timer`, every 15 minutes with up to two-minute randomized delay |
 
-The production timer is `OnCalendar=*-*-* 00/6:10:00`, `Persistent=true`, `RandomizedDelaySec=10m`.
+The repository-managed production timer is `OnCalendar=*:0/15`, `Persistent=true`, `RandomizedDelaySec=2m`. Per-source locks, interval gates, and the one-shot systemd service prevent this refresh opportunity cadence from turning into overlapping provider runs.
 
 ## Scheduled self-hosted seeders — live result
 

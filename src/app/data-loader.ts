@@ -89,7 +89,7 @@ import {
   fetchSanctionsPressure,
   fetchRadiationWatch,
 } from '@/services';
-import { getMarketWatchlistEntries } from '@/services/market-watchlist';
+import { fetchInvestWatchlistMirror, getMarketWatchlistEntries, mergeMarketWatchlistEntries } from '@/services/market-watchlist';
 import { fetchStockAnalysesForTargets, getStockAnalysisTargets, type StockAnalysisResult } from '@/services/stock-analysis';
 import { fetchInsiderTransactions } from '@/services/insider-transactions';
 import {
@@ -1630,7 +1630,9 @@ export class DataLoaderManager implements AppModule {
 
   async loadMarkets(): Promise<void> {
     try {
-      const customEntries = getMarketWatchlistEntries();
+      const manualEntries = getMarketWatchlistEntries();
+      const investMirror = await fetchInvestWatchlistMirror();
+      const customEntries = mergeMarketWatchlistEntries(manualEntries, investMirror.status === 'ok' ? investMirror.symbols : []);
       const effectiveSymbols = (() => {
         if (customEntries.length === 0) return MARKET_SYMBOLS;
         const base = MARKET_SYMBOLS.slice();

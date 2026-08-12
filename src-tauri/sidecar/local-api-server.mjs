@@ -3,7 +3,7 @@ import http, { createServer } from 'node:http';
 import https from 'node:https';
 import { createHmac, timingSafeEqual } from 'node:crypto';
 import dns from 'node:dns/promises';
-import { existsSync, readFileSync, writeFileSync } from 'node:fs';
+import { existsSync, lstatSync, readFileSync, statSync, writeFileSync } from 'node:fs';
 import { readdir } from 'node:fs/promises';
 import { isIP } from 'node:net';
 import { promisify } from 'node:util';
@@ -19,6 +19,11 @@ const LOCAL_API_TRANSPORT_HEADER = 'x-worldmonitor-local-token';
 const CREDENTIAL_SYNC_HEADER = 'x-worldmonitor-credential-sync';
 const CREDENTIAL_SYNC_TOKEN_FILE_ENV = 'CREDENTIALS_RUNTIME_TOKEN_FILE';
 const CREDENTIAL_SYNC_KEYS = new Set(["FINNHUB_API_KEY", "ALPHA_VANTAGE_API_KEY", "EIA_API_KEY", "FRED_API_KEY", "IMF_API_KEY", "WTO_API_KEY", "NASA_FIRMS_API_KEY", "OPENAQ_API_KEY", "WAQI_API_KEY", "RELIEFWEB_APPNAME", "ACLED_ACCESS_TOKEN", "ACLED_EMAIL", "ACLED_PASSWORD", "UCDP_ACCESS_TOKEN", "CLOUDFLARE_API_TOKEN", "URLHAUS_AUTH_KEY", "OTX_API_KEY", "ABUSEIPDB_API_KEY", "AISSTREAM_API_KEY", "OPENSKY_CLIENT_ID", "OPENSKY_CLIENT_SECRET", "AVIATIONSTACK_API", "ICAO_API_KEY", "WINGBITS_API_KEY", "TRAVELPAYOUTS_API_TOKEN", "SAM_GOV_API_KEY", "SCRAPECREATORS_API_KEY", "REDDIT_CLIENT_ID", "REDDIT_CLIENT_SECRET", "REDDIT_USER_AGENT", "TELEGRAM_API_ID", "TELEGRAM_API_HASH", "TELEGRAM_SESSION", "EXA_API_KEYS", "BRAVE_API_KEYS", "SERPAPI_API_KEYS", "GROQ_API_KEY", "OPENROUTER_API_KEY", "LLM_API_URL", "LLM_API_KEY", "LLM_MODEL"]);
+const INVEST_WATCHLIST_PATH = process.env.INVEST_WATCHLIST_PATH || '/run/worldmonitor-invest/invest-watchlist.json';
+const INVEST_WATCHLIST_MAX_BYTES = 16 * 1024;
+const INVEST_WATCHLIST_MAX_SYMBOLS = 50;
+// Consumer-owned freshness policy: do not trust a producer to extend its own TTL.
+const INVEST_WATCHLIST_MAX_AGE_SECONDS = 24 * 60 * 60;
 
 // Monkey-patch globalThis.fetch to force IPv4 for HTTPS requests.
 // Node.js built-in fetch (undici) tries IPv6 first via Happy Eyeballs.
@@ -837,6 +842,7 @@ function resolveConfig(options = {}) {
     cloudFallback,
     allowPrivateRemoteBase,
     allowPrivateFetchOrigins,
+    investWatchlistPath: String(options.investWatchlistPath ?? process.env.INVEST_WATCHLIST_PATH ?? INVEST_WATCHLIST_PATH),
     logger,
   };
 }
@@ -1767,6 +1773,55 @@ async function dispatch(requestUrl, req, routes, context) {
       return json(result, result.valid ? 200 : 422);
     } catch {
       return json({ error: 'expected { key, value }' }, 400);
+    }
+  }
+
+  if (requestUrl.pathname === '/api/invest-watchlist') {
+    if (req.method !== 'GET' && req.method !== 'HEAD') {
+      return json({ error: 'GET required' }, 405);
+    }
+    try {
+      const fileInfo = lstatSync(context.investWatchlistPath);
+      if (!fileInfo.isFile() || fileInfo.isSymbolicLink() || fileInfo.size > INVEST_WATCHLIST_MAX_BYTES) {
+        return json({ source: 'invest-dashboard', status: 'unavailable', symbols: [], error: 'mirror_artifact_invalid' }, 503);
+      }
+      const payload = JSON.parse(readFileSync(context.investWatchlistPath, 'utf8'));
+      const sourceUpdatedAt = typeof payload.sourceUpdatedAt === 'string' ? Date.parse(payload.sourceUpdatedAt) : NaN;
+      const maxAgeSeconds = Number(payload.maxAgeSeconds);
+      const isFresh = payload?.schemaVersion === 1
+        && payload?.source === 'invest-dashboard'
+        && payload?.mode === 'read_only_holdings_mirror'
+        && payload?.status === 'ok'
+        && Number.isFinite(sourceUpdatedAt)
+        && Number.isFinite(maxAgeSeconds)
+        && maxAgeSeconds === INVEST_WATCHLIST_MAX_AGE_SECONDS
+        && Date.now() - sourceUpdatedAt >= 0
+        && Date.now() - sourceUpdatedAt <= INVEST_WATCHLIST_MAX_AGE_SECONDS * 1000
+        && Array.isArray(payload.symbols)
+        && payload.symbols.length <= INVEST_WATCHLIST_MAX_SYMBOLS
+        && payload.symbols.every((symbol) => typeof symbol === 'string' && /^[A-Z0-9.^=-]{1,16}$/.test(symbol));
+      if (!isFresh) {
+        return json({
+          source: 'invest-dashboard',
+          status: payload?.status === 'stale' ? 'stale' : 'unavailable',
+          sourceUpdatedAt: typeof payload?.sourceUpdatedAt === 'string' ? payload.sourceUpdatedAt : null,
+          symbols: [],
+          error: typeof payload?.error === 'string' ? payload.error : 'mirror_artifact_unavailable',
+        }, 503);
+      }
+      return json({
+        schemaVersion: 1,
+        source: 'invest-dashboard',
+        mode: 'read_only_holdings_mirror',
+        status: 'ok',
+        sourceUpdatedAt: payload.sourceUpdatedAt,
+        publishedAt: typeof payload.publishedAt === 'string' ? payload.publishedAt : null,
+        maxAgeSeconds,
+        symbols: [...new Set(payload.symbols)],
+      }, 200);
+    } catch (error) {
+      if (error?.code !== 'ENOENT') context.logger.warn(`[invest-watchlist] unavailable: ${error.message}`);
+      return json({ source: 'invest-dashboard', status: 'unavailable', symbols: [], error: 'mirror_artifact_unavailable' }, 503);
     }
   }
 
