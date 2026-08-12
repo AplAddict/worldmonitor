@@ -1292,6 +1292,12 @@ function orefPreSerializeResponses() {
 }
 
 async function orefBootstrapHistoryFromUpstream() {
+  // Historical OREF endpoints require an Israeli proxy. Live alerts still use
+  // Tzeva Adom without one, so skip an empty-proxy retry storm at startup.
+  if (!OREF_PROXY_AVAILABLE) {
+    console.log('[Relay] OREF history bootstrap skipped: no Israeli proxy configured');
+    return false;
+  }
   const tmpFile = require('path').join(require('os').tmpdir(), `oref-history-${Date.now()}.json`);
   let raw;
   try {
@@ -1508,7 +1514,11 @@ async function orefBootstrapHistoryWithRetry() {
   const BASE_DELAY_MS = 3000;
   for (let attempt = 1; attempt <= MAX_ATTEMPTS; attempt++) {
     try {
-      await orefBootstrapHistoryFromUpstream();
+      const bootstrapped = await orefBootstrapHistoryFromUpstream();
+      if (!bootstrapped) {
+        orefState.bootstrapSource = null;
+        return;
+      }
       if (UPSTASH_ENABLED) {
         await orefPersistHistory().catch(() => {});
       }
