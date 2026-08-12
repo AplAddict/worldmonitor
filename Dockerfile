@@ -76,6 +76,7 @@ COPY docker/nginx.conf /etc/nginx/nginx.conf.template
 COPY docker/supervisord.conf /etc/supervisor/conf.d/worldmonitor.conf
 COPY docker/entrypoint.sh /app/entrypoint.sh
 COPY docker/start-supervisor.mjs /app/start-supervisor.mjs
+COPY docker/provider-catalog.mjs /app/provider-catalog.mjs
 RUN chmod +x /app/entrypoint.sh
 
 # Ensure writable dirs for non-root
