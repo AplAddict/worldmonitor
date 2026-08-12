@@ -127,6 +127,23 @@ describe('getProPanelKeys (mobile nav PRO chip)', () => {
   });
 });
 
+describe('self-hosted mobile drawer', () => {
+  it('keeps the drawer local to this dashboard instead of exposing upstream variants or external product links', () => {
+    const layout = readFileSync(resolve(__dirname, '../src/app/panel-layout.ts'), 'utf-8');
+    const drawerStart = layout.indexOf('id="mobileMenu"');
+    const drawerEnd = layout.indexOf('id="regionSheetBackdrop"', drawerStart);
+    assert.ok(drawerStart >= 0 && drawerEnd > drawerStart, 'mobile drawer bounds must exist');
+    const drawer = layout.slice(drawerStart, drawerEnd);
+
+    assert.doesNotMatch(drawer, /mobile-menu-variant/);
+    assert.doesNotMatch(drawer, /worldmonitor\.app|invest\.isaaczipperstein\.com|x\.com\/eliehabib/);
+    assert.match(drawer, /mobileMenuRegion/);
+    assert.match(drawer, /mobileMenuMission/);
+    assert.match(drawer, /mobileMenuSettings/);
+    assert.match(drawer, /mobileMenuTheme/);
+  });
+});
+
 describe('mobile nav i18n contract', () => {
   it('every category labelKey resolves in en.json', () => {
     const en = JSON.parse(readFileSync(resolve(__dirname, '../src/locales/en.json'), 'utf-8'));
