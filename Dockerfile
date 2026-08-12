@@ -8,7 +8,7 @@
 # =============================================================================
 
 # ── Stage 1: Builder ─────────────────────────────────────────────────────────
-FROM node:24-alpine@sha256:a0b9bf06e4e6193cf7a0f58816cc935ff8c2a908f81e6f1a95432d679c54fbfd AS builder
+FROM node:22-alpine AS builder
 
 WORKDIR /app
 
@@ -23,12 +23,12 @@ COPY . .
 # Output is api/**/*.js alongside the source .ts files
 RUN node docker/build-handlers.mjs
 
-# Build the crawlable static corpus and Vite frontend (outputs to dist/)
+# Build Vite frontend (outputs to dist/)
 # Skip blog build — blog-site has its own deps not installed here
-RUN npm run build:crawlable-corpus && npm run build:sitemap && npx tsc && npx vite build
+RUN npx tsc && npx vite build
 
 # ── Stage 2: Runtime dependencies ───────────────────────────────────────────
-FROM node:24-alpine@sha256:a0b9bf06e4e6193cf7a0f58816cc935ff8c2a908f81e6f1a95432d679c54fbfd AS runtime-deps
+FROM node:22-alpine AS runtime-deps
 
 WORKDIR /app
 
@@ -42,7 +42,7 @@ COPY docker/runtime-package-lock.json ./package-lock.json
 RUN npm ci --omit=dev --omit=optional --ignore-scripts
 
 # ── Stage 3: Runtime ─────────────────────────────────────────────────────────
-FROM node:24-alpine@sha256:a0b9bf06e4e6193cf7a0f58816cc935ff8c2a908f81e6f1a95432d679c54fbfd AS final
+FROM node:22-alpine AS final
 
 # nginx + supervisord
 RUN apk add --no-cache nginx supervisor gettext && \
@@ -76,8 +76,7 @@ COPY docker/nginx.conf /etc/nginx/nginx.conf.template
 COPY docker/supervisord.conf /etc/supervisor/conf.d/worldmonitor.conf
 COPY docker/entrypoint.sh /app/entrypoint.sh
 COPY docker/start-supervisor.mjs /app/start-supervisor.mjs
-COPY docker/provider-catalog.mjs /app/provider-catalog.mjs
-RUN chmod +x /app/entrypoint.sh && chmod 0644 /app/start-supervisor.mjs /app/provider-catalog.mjs
+RUN chmod +x /app/entrypoint.sh
 
 # Ensure writable dirs for non-root
 RUN chown -R appuser:appgroup /app /tmp/nginx-client-body /tmp/nginx-proxy \
@@ -88,13 +87,8 @@ USER appuser
 
 EXPOSE 8080
 
-# Healthcheck via nginx. Use 127.0.0.1 (not localhost - that resolves to ::1
-# first, where nginx does not listen). Probe /api/sidecar-health, a dedicated
-# auth-exempt liveness route in the sidecar (local-api-server.mjs): reaching it
-# through nginx's /api/ proxy verifies BOTH nginx and the node sidecar are up,
-# unlike a static "/" probe which only proves nginx is serving. Keep this off
-# /api/health so the public compact data-health contract still reaches api/health.js.
+# Healthcheck via nginx
 HEALTHCHECK --interval=30s --timeout=5s --start-period=15s --retries=3 \
-  CMD wget -qO- http://127.0.0.1:8080/api/sidecar-health >/dev/null 2>&1 || exit 1
+  CMD wget -qO- http://localhost:8080/api/health || exit 1
 
 CMD ["/app/entrypoint.sh"]
