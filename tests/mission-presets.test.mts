@@ -662,8 +662,8 @@ describe('mission preset definitions', () => {
     const preset = getMissionPreset('macro-market-watch');
     assert.ok(preset);
     assert.equal(preset.timeRange, '24h');
-    assert.deepEqual(preset.panels.slice(0, 8), [
-      'map', 'markets', 'stock-analysis', 'daily-market-brief', 'markets-news',
+    assert.deepEqual(preset.panels.slice(0, 9), [
+      'map', 'markets', 'holdings-research', 'stock-analysis', 'daily-market-brief', 'markets-news',
       'earnings-calendar', 'economic-calendar', 'market-breadth',
     ]);
     assert.ok(preset.panels.includes('derivatives'));
@@ -1213,7 +1213,7 @@ describe('mission preset shell integration', () => {
     await waitForMissionTimers();
 
     assert.equal(ctx.panelSettings.markets?.enabled, true);
-    assert.deepEqual(callbacks.appliedOrders[0]?.slice(0, 4), ['markets', 'stock-analysis', 'daily-market-brief', 'earnings-calendar']);
+    assert.deepEqual(callbacks.appliedOrders[0]?.slice(0, 5), ['markets', 'holdings-research', 'stock-analysis', 'daily-market-brief', 'earnings-calendar']);
     assert.equal(localStorage.getItem(MISSION_PRESET_STORAGE_KEY), null);
 
     assert.doesNotThrow(() => manager.resetMissionPreset());

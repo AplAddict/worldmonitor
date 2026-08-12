@@ -156,6 +156,7 @@ import type {
 } from '@/components/MarketPanel';
 import { ResearchServiceClient } from '@/generated/client/worldmonitor/research/v1/service_client';
 import type { StockAnalysisPanel } from '@/components/StockAnalysisPanel';
+import type { HoldingsResearchPanel } from '@/components/HoldingsResearchPanel';
 import type { StockBacktestPanel } from '@/components/StockBacktestPanel';
 import type { PredictionPanel } from '@/components/PredictionPanel';
 import type { MonitorPanel } from '@/components/MonitorPanel';
@@ -1632,6 +1633,7 @@ export class DataLoaderManager implements AppModule {
     try {
       const manualEntries = getMarketWatchlistEntries();
       const investMirror = await fetchInvestWatchlistMirror();
+      (this.ctx.panels['holdings-research'] as HoldingsResearchPanel | undefined)?.renderMirror(investMirror);
       const customEntries = mergeMarketWatchlistEntries(manualEntries, investMirror.status === 'ok' ? investMirror.symbols : []);
       const effectiveSymbols = (() => {
         if (customEntries.length === 0) return MARKET_SYMBOLS;

@@ -261,6 +261,7 @@ export const MISSION_PRESETS: readonly MissionPreset[] = [
     panels: [
       'map',
       'markets',
+      'holdings-research',
       'stock-analysis',
       'daily-market-brief',
       'markets-news',
