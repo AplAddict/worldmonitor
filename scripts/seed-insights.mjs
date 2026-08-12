@@ -141,9 +141,21 @@ async function readExistingInsights() {
   return data.result ? unwrapEnvelope(JSON.parse(data.result)).data : null;
 }
 
-// Provider config — mirrors server/_shared/llm.ts getProviderCredentials()
-// Order: ollama → groq → openrouter (canonical chain)
+// Provider config — mirrors server/_shared/llm.ts getProviderCredentials().
+// When LLM_PROVIDER=generic, the private Hermes boundary is the only eligible
+// egress path; otherwise legacy fallbacks retain their historical ordering.
 const LLM_PROVIDERS = [
+  {
+    name: 'generic',
+    envKey: 'LLM_API_URL',
+    apiUrlFn: (url) => url,
+    model: () => process.env.LLM_MODEL || 'gpt-3.5-turbo',
+    headers: () => {
+      const key = process.env.LLM_API_KEY;
+      return key ? { Authorization: `Bearer ${key}`, 'Content-Type': 'application/json', 'User-Agent': CHROME_UA } : null;
+    },
+    timeout: 25_000,
+  },
   {
     name: 'ollama',
     envKey: 'OLLAMA_API_URL',
@@ -205,9 +217,15 @@ async function callLLM(headline, options = {}) {
   const budgetStartedAtMs = Date.now();
   const usableBudgetMs = () => Math.max(0, budgetStartedAtMs + callBudgetMs - Date.now() - INSIGHTS_LLM_CALL_BUDGET_GUARD_MS);
 
-  for (const provider of LLM_PROVIDERS) {
+  const configuredProvider = process.env.LLM_PROVIDER;
+  const providerChain = configuredProvider === 'generic'
+    ? LLM_PROVIDERS.filter((provider) => provider.name === 'generic')
+    : LLM_PROVIDERS;
+
+  for (const provider of providerChain) {
     const envVal = process.env[provider.envKey];
-    if (!envVal) continue;
+    const headers = envVal ? provider.headers(envVal) : null;
+    if (!envVal || !headers) continue;
 
     const apiUrl = provider.apiUrlFn ? provider.apiUrlFn(envVal) : provider.apiUrl;
     const model = typeof provider.model === 'function' ? provider.model() : provider.model;
@@ -218,7 +236,7 @@ async function callLLM(headline, options = {}) {
         if (usable <= 0) throw createLlmBudgetError('insights llm budget exhausted');
         const response = await insightsFetch(apiUrl, {
           method: 'POST',
-          headers: provider.headers(envVal),
+          headers: headers,
           body: JSON.stringify({
             model,
             messages: [

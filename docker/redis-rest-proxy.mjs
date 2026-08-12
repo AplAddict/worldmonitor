@@ -69,7 +69,10 @@ async function runCommand(args) {
   return client.sendCommand([cmd, ...cmdArgs.map(String)]);
 }
 
-const MAX_BODY_BYTES = 1024 * 1024; // 1 MB
+// Seed payloads are validated at 5 MiB in _seed-utils.mjs. The REST bridge must
+// accept that same bounded maximum; the former 1 MiB cap destroyed larger
+// wildfire SET requests mid-stream (surfacing to the seeder as ECONNRESET).
+const MAX_BODY_BYTES = 5 * 1024 * 1024; // 5 MiB
 
 async function readBody(req) {
   const chunks = [];

@@ -274,6 +274,13 @@ describe('health freshness ingestion', () => {
     );
   });
 
+  it('renders per-source evidence drill-down details instead of only a compact status', () => {
+    const panelSrc = readFileSync(resolve(repoRoot, 'src/components/StrategicRiskPanel.ts'), 'utf8');
+    assert.match(panelSrc, /risk-source-details/, 'each source needs an expandable evidence surface');
+    assert.match(panelSrc, /freshness deadline/, 'source detail needs a deterministic freshness deadline');
+    assert.match(panelSrc, /source status/, 'source detail needs the upstream source-health reason');
+  });
+
   it('polls health freshness from the app scheduler instead of StrategicRiskPanel', () => {
     const appSrc = readFileSync(resolve(repoRoot, 'src/App.ts'), 'utf8');
     const panelSrc = readFileSync(resolve(repoRoot, 'src/components/StrategicRiskPanel.ts'), 'utf8');

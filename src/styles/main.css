@@ -318,6 +318,9 @@ canvas,
   display: flex;
   align-items: center;
   justify-content: space-between;
+  /* Header-owned popovers must clear the pinned map layer (z-index: 100). */
+  position: relative;
+  z-index: 200;
   padding: 8px 16px;
   background: var(--surface);
   border-bottom: 1px solid var(--border);
@@ -12503,6 +12506,7 @@ a.prediction-link:hover {
   position: absolute;
   top: 100%;
   left: 0;
+  z-index: 1200;
   margin-top: 8px;
   width: 320px;
   background: var(--bg);
@@ -14704,6 +14708,26 @@ a.prediction-link:hover {
   padding-right: 2px;
 }
 
+.risk-source-evidence {
+  min-width: 0;
+  border: 1px solid;
+  border-radius: 7px;
+  background: var(--overlay-subtle);
+}
+
+.risk-source-evidence > summary {
+  list-style: none;
+  cursor: pointer;
+}
+
+.risk-source-evidence > summary::-webkit-details-marker {
+  display: none;
+}
+
+.risk-source-evidence[open] {
+  background: var(--overlay-medium);
+}
+
 .risk-source-chip {
   display: grid;
   grid-template-columns: auto minmax(0, 1fr) auto;
@@ -15283,7 +15307,8 @@ a.prediction-link:hover {
   border: 1px solid var(--border);
   border-radius: 6px;
   box-shadow: 0 8px 24px var(--shadow-color);
-  z-index: 1000;
+  /* Stay above adjacent header controls within the header overlay layer. */
+  z-index: 1200;
   display: none;
   margin-top: 4px;
 }

@@ -4,6 +4,7 @@ import { afterEach, describe, it } from 'node:test';
 import { callLlm } from '../server/_shared/llm.ts';
 
 const originalFetch = globalThis.fetch;
+const originalLlmProvider = process.env.LLM_PROVIDER;
 const originalGroqApiKey = process.env.GROQ_API_KEY;
 const originalOpenRouterApiKey = process.env.OPENROUTER_API_KEY;
 const originalOllamaApiUrl = process.env.OLLAMA_API_URL;
@@ -12,6 +13,9 @@ const originalLlmApiKey = process.env.LLM_API_KEY;
 
 afterEach(() => {
   globalThis.fetch = originalFetch;
+
+  if (originalLlmProvider === undefined) delete process.env.LLM_PROVIDER;
+  else process.env.LLM_PROVIDER = originalLlmProvider;
 
   if (originalGroqApiKey === undefined) delete process.env.GROQ_API_KEY;
   else process.env.GROQ_API_KEY = originalGroqApiKey;
@@ -70,6 +74,36 @@ describe('callLlm', () => {
     assert.deepEqual(postUrls.filter(url => url.includes('/chat/completions')), [
       'https://api.groq.com/openai/v1/chat/completions',
     ]);
+  });
+
+  it('enforces LLM_PROVIDER as a single-provider boundary even when a caller prefers external providers', async () => {
+    process.env.LLM_PROVIDER = 'generic';
+    process.env.LLM_API_URL = 'http://hermes.internal:8643/v1/chat/completions';
+    process.env.LLM_API_KEY = 'hermes-test-key';
+    process.env.LLM_MODEL = 'worldmonitorai';
+    process.env.GROQ_API_KEY = 'groq-test-key';
+    process.env.OPENROUTER_API_KEY = 'or-test-key';
+
+    const postUrls: string[] = [];
+    globalThis.fetch = (async (input: RequestInfo | URL, init?: RequestInit) => {
+      const url = typeof input === 'string' ? input : input instanceof URL ? input.toString() : input.url;
+      if ((init?.method || 'GET') === 'GET') return new Response('', { status: 200 });
+      postUrls.push(url);
+      return new Response(JSON.stringify({
+        choices: [{ message: { content: 'hermes boundary response' } }],
+        usage: { total_tokens: 7 },
+      }), { status: 200 });
+    }) as typeof fetch;
+
+    const result = await callLlm({
+      messages: [{ role: 'user', content: 'Use the configured service only.' }],
+      providerOrder: ['openrouter', 'groq'],
+    });
+
+    assert.ok(result);
+    assert.equal(result.provider, 'generic');
+    assert.equal(result.model, 'worldmonitorai');
+    assert.deepEqual(postUrls, ['http://hermes.internal:8643/v1/chat/completions']);
   });
 
   it('supports explicitly bypassing groq with a stronger model override', async () => {

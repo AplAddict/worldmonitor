@@ -429,6 +429,24 @@ export class StrategicRiskPanel extends Panel {
     }
   }
 
+  private sourceHealthDetail(source: DataSourceState): string {
+    const recordCount = `${source.itemCount} ${source.itemCount === 1 ? 'record' : 'records'}`;
+    const deadline = source.maxStaleMin
+      ? `${source.maxStaleMin}m`
+      : 'not reported';
+    const updated = source.lastUpdate
+      ? dataFreshness.getTimeSince(source.id)
+      : 'never';
+    return `
+      <div class="risk-source-details">
+        <span>source status: ${escapeHtml(source.healthStatus || source.status)}</span>
+        <span>last evidence: ${escapeHtml(updated)}</span>
+        <span>freshness deadline: ${escapeHtml(deadline)}</span>
+        <span>coverage: ${escapeHtml(recordCount)}</span>
+      </div>
+    `;
+  }
+
   private renderFreshnessSurface(): string {
     if (!this.freshnessSummary) return '';
     // Health is an evidence surface: show every registered source, including
@@ -444,12 +462,15 @@ export class StrategicRiskPanel extends Panel {
         <div class="risk-section-title">${t('components.strategicRisk.dataFreshness')} · ${this.freshnessSummary.activeSources}/${this.freshnessSummary.totalSources} active · ${this.freshnessSummary.errorSources} errors</div>
         <div class="risk-sources-compact">
           ${sources.map(source => `
-            <span class="risk-source-chip" title="${escapeHtml(source.healthStatus || source.status)}" style="border-color: ${getStatusColor(source.status)}">
-              <span class="risk-source-dot" style="color: ${getStatusColor(source.status)}">${getStatusIcon(source.status)}</span>
-              <span class="risk-source-name">${escapeHtml(source.name)}</span>
-              <span class="risk-source-state">${escapeHtml(this.sourceHealthLabel(source))}</span>
-              <span class="risk-source-time">${source.status === 'no_data' ? 'no timestamp' : escapeHtml(dataFreshness.getTimeSince(source.id))}</span>
-            </span>
+            <details class="risk-source-evidence" style="border-color: ${getStatusColor(source.status)}">
+              <summary class="risk-source-chip" title="${escapeHtml(source.healthStatus || source.status)}">
+                <span class="risk-source-dot" style="color: ${getStatusColor(source.status)}">${getStatusIcon(source.status)}</span>
+                <span class="risk-source-name">${escapeHtml(source.name)}</span>
+                <span class="risk-source-state">${escapeHtml(this.sourceHealthLabel(source))}</span>
+                <span class="risk-source-time">${source.status === 'no_data' ? 'no timestamp' : escapeHtml(dataFreshness.getTimeSince(source.id))}</span>
+              </summary>
+              ${this.sourceHealthDetail(source)}
+            </details>
           `).join('')}
         </div>
       </div>

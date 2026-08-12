@@ -39,7 +39,14 @@ export async function summarizeArticle(
   req: SummarizeArticleRequest,
 ): Promise<SummarizeArticleResponse> {
   const isPremium = await isCallerPremium(ctx.request);
-  const { provider, mode = 'brief', geoContext = '', variant = 'full', lang = 'en' } = req;
+  const { provider: requestedProvider, mode = 'brief', geoContext = '', variant = 'full', lang = 'en' } = req;
+  // A self-hosted LLM_PROVIDER is an egress boundary, not a preference.
+  // Keep the caller-selected provider only when the operator did not configure
+  // an explicit supported boundary (matching server/_shared/llm.ts).
+  const configuredProvider = process.env.LLM_PROVIDER;
+  const provider = ['ollama', 'groq', 'openrouter', 'generic'].includes(configuredProvider || '')
+    ? configuredProvider!
+    : requestedProvider;
   const systemAppend = isPremium && typeof req.systemAppend === 'string' ? req.systemAppend : '';
 
   const MAX_HEADLINES = 10;

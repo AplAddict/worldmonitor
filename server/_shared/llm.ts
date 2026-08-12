@@ -154,6 +154,17 @@ function resolveProviderChain(opts: {
   forcedProvider?: string;
   providerOrder?: string[];
 }): string[] {
+  // Self-hosted operators can set LLM_PROVIDER to establish one audited egress
+  // boundary. It deliberately overrides call-site preferences (including the
+  // stock overlay's historical OpenRouter preference) so requests cannot
+  // silently leave that boundary through a fallback provider.
+  const configuredProvider = process.env.LLM_PROVIDER;
+  if (configuredProvider && PROVIDER_SET.has(configuredProvider)) {
+    return [configuredProvider];
+  }
+  if (configuredProvider) {
+    console.warn(`[llm] LLM_PROVIDER="${configuredProvider}" is not a known provider; using caller/default chain`);
+  }
   if (opts.forcedProvider) return [opts.forcedProvider];
   if (!Array.isArray(opts.providerOrder) || opts.providerOrder.length === 0) {
     return [...PROVIDER_CHAIN];
