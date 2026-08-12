@@ -1,6 +1,7 @@
 import { Panel } from './Panel';
 import { escapeHtml, unsafeRawHtml } from '@/utils/sanitize';
 import {
+  buildHoldingsCoverage,
   buildHoldingsOverlapNotes,
   buildHoldingsResearchLanes,
   type HoldingsResearchLane,
@@ -37,6 +38,7 @@ export class HoldingsResearchPanel extends Panel {
       return;
     }
     const lanes = buildHoldingsResearchLanes(mirror.symbols);
+    const coverage = buildHoldingsCoverage(mirror.symbols);
     const overlapNotes = buildHoldingsOverlapNotes(mirror.symbols);
     this.setDataBadge('live', `${mirror.symbols.length} symbols · read-only`);
     if (lanes.length === 0) {
@@ -50,8 +52,12 @@ export class HoldingsResearchPanel extends Panel {
           <ul style="margin:6px 0 0;padding-left:16px;color:var(--text-secondary);font-size:10px">${overlapNotes.map((note) => `<li>${escapeHtml(note)}</li>`).join('')}</ul>
         </section>`
       : '';
+    const coverageNote = coverage.unmappedSymbols.length
+      ? `<div style="margin:6px 0 10px;padding:7px 8px;border-left:2px solid var(--semantic-warning);color:var(--text-secondary);font-size:10px">${coverage.mappedSymbolCount} of ${coverage.mirroredSymbolCount} mirrored symbols are in a curated driver lane. ${coverage.unmappedSymbols.length} need general ticker research: ${escapeHtml(coverage.unmappedSymbols.join(', '))}.</div>`
+      : `<div style="margin:6px 0 10px;color:var(--text-dim);font-size:10px">All ${coverage.mirroredSymbolCount} mirrored symbols have at least one curated driver lane.</div>`;
     this.setSafeContent(unsafeRawHtml(`<div style="padding:0 2px">
       <div style="color:var(--text-dim);font-size:10px;margin-bottom:6px">Invest mirror refreshed ${escapeHtml(updated)}. Symbol-level research coverage only—never allocation, cost basis, or a trade instruction.</div>
+      ${coverageNote}
       ${overlap}
       ${lanes.map(laneHtml).join('')}
     </div>`, 'HoldingsResearchPanel renders escaped controlled lane templates'));

@@ -127,6 +127,34 @@ export function buildHoldingsResearchLanes(mirroredSymbols: readonly string[]): 
   }).filter((lane) => lane.symbols.length > 0);
 }
 
+export interface HoldingsCoverage {
+  mirroredSymbolCount: number;
+  mappedSymbols: string[];
+  unmappedSymbols: string[];
+  mappedSymbolCount: number;
+}
+
+/**
+ * Coverage of the symbol-only mirror against deliberately curated research
+ * lanes. An unmapped symbol means "needs a lane definition", never "not held"
+ * or "worthless". Input is deduplicated and normalized before classification.
+ */
+export function buildHoldingsCoverage(mirroredSymbols: readonly string[]): HoldingsCoverage {
+  const symbols = [...new Set(mirroredSymbols
+    .map((symbol) => symbol.trim().toUpperCase())
+    .filter(Boolean))].sort();
+  const mapped = new Set(HOLDINGS_RESEARCH_LANES
+    .filter((lane) => lane.id !== 'portfolio-coverage')
+    .flatMap((lane) => lane.symbols));
+  const mappedSymbols = symbols.filter((symbol) => mapped.has(symbol));
+  return {
+    mirroredSymbolCount: symbols.length,
+    mappedSymbols,
+    unmappedSymbols: symbols.filter((symbol) => !mapped.has(symbol)),
+    mappedSymbolCount: mappedSymbols.length,
+  };
+}
+
 export function buildHoldingsOverlapNotes(mirroredSymbols: readonly string[]): string[] {
   const held = new Set(mirroredSymbols.map((symbol) => symbol.trim().toUpperCase()));
   const notes: string[] = [];

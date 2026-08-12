@@ -662,12 +662,12 @@ describe('mission preset definitions', () => {
     const preset = getMissionPreset('macro-market-watch');
     assert.ok(preset);
     assert.equal(preset.timeRange, '24h');
-    assert.deepEqual(preset.panels.slice(0, 9), [
+    assert.deepEqual(preset.panels, [
       'map', 'markets', 'holdings-research', 'stock-analysis', 'daily-market-brief', 'markets-news',
-      'earnings-calendar', 'economic-calendar', 'market-breadth',
+      'earnings-calendar', 'heatmap', 'macro-signals',
     ]);
-    assert.ok(preset.panels.includes('derivatives'));
-    assert.ok(preset.panels.includes('sanctions-pressure'));
+    assert.equal(preset.panels.includes('derivatives'), false);
+    assert.equal(preset.panels.includes('sanctions-pressure'), false);
     assert.equal(preset.panels.includes('crypto'), false);
     assert.equal(preset.panels.includes('stablecoins'), false);
   });
