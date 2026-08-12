@@ -268,6 +268,7 @@ export const MISSION_PRESETS: readonly MissionPreset[] = [
       // Panels, but are not forced open when their cache is unavailable.
       'markets',
       'holdings-research',
+      'catalyst-board',
       'stock-analysis',
       'daily-market-brief',
       'markets-news',

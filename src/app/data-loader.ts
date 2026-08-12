@@ -90,6 +90,7 @@ import {
   fetchRadiationWatch,
 } from '@/services';
 import { fetchInvestWatchlistMirror, getMarketWatchlistEntries, mergeMarketWatchlistEntries } from '@/services/market-watchlist';
+import { buildCatalystBoard } from '@/services/catalyst-board';
 import { fetchStockAnalysesForTargets, getStockAnalysisTargets, type StockAnalysisResult } from '@/services/stock-analysis';
 import { fetchInsiderTransactions } from '@/services/insider-transactions';
 import {
@@ -157,6 +158,7 @@ import type {
 import { ResearchServiceClient } from '@/generated/client/worldmonitor/research/v1/service_client';
 import type { StockAnalysisPanel } from '@/components/StockAnalysisPanel';
 import type { HoldingsResearchPanel } from '@/components/HoldingsResearchPanel';
+import type { CatalystBoardPanel } from '@/components/CatalystBoardPanel';
 import type { StockBacktestPanel } from '@/components/StockBacktestPanel';
 import type { PredictionPanel } from '@/components/PredictionPanel';
 import type { MonitorPanel } from '@/components/MonitorPanel';
@@ -1418,6 +1420,19 @@ export class DataLoaderManager implements AppModule {
 
     this.ctx.allNews = collectedNews;
     this.ctx.initialLoadComplete = true;
+
+    // Catalyst Board is a derived, read-only research view over the same
+    // attributable market feed. It independently re-reads the bounded
+    // symbol-only mirror; it never receives account or position data.
+    const catalystPanel = this.ctx.panels['catalyst-board'] as CatalystBoardPanel | undefined;
+    if (catalystPanel) {
+      const mirror = await fetchInvestWatchlistMirror();
+      catalystPanel.renderBoard(
+        buildCatalystBoard(this.ctx.newsByCategory.markets ?? [], mirror.status === 'ok' ? mirror.symbols : []),
+        mirror.status,
+        mirror.status === 'ok' ? mirror.symbols.length : 0,
+      );
+    }
 
     this.ctx.map?.updateHotspotActivity(this.ctx.allNews);
 

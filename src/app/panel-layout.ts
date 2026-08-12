@@ -1340,6 +1340,7 @@ export class PanelLayoutManager implements AppModule {
     this.lazyPanel('markets', () => import('@/components/MarketPanel').then(m => new m.MarketPanel()));
     this.lazyPanel('stock-analysis', () => import('@/components/StockAnalysisPanel').then(m => new m.StockAnalysisPanel()));
     this.lazyPanel('holdings-research', () => import('@/components/HoldingsResearchPanel').then(m => new m.HoldingsResearchPanel()));
+    this.lazyPanel('catalyst-board', () => import('@/components/CatalystBoardPanel').then(m => new m.CatalystBoardPanel()));
     this.lazyPanel('stock-backtest', () => import('@/components/StockBacktestPanel').then(m => new m.StockBacktestPanel()));
     // Web premium gating for stock-analysis and stock-backtest is handled
     // reactively by updatePanelGating() via auth state subscription.

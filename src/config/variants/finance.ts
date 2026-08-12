@@ -148,6 +148,7 @@ export const DEFAULT_PANELS: Record<string, PanelConfig> = {
   'stock-analysis': { name: 'Stock Analysis', enabled: true, priority: 1 },
   'stock-backtest': { name: 'Backtesting', enabled: true, priority: 1 },
   'daily-market-brief': { name: 'Daily Market Brief', enabled: true, priority: 1 },
+  'catalyst-board': { name: 'Catalyst Board', enabled: true, priority: 1 },
   'markets-news': { name: 'Markets News', enabled: true, priority: 2 },
   forex: { name: 'Forex & Currencies', enabled: true, priority: 1 },
   bonds: { name: 'Fixed Income', enabled: true, priority: 1 },
