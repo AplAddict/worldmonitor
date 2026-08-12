@@ -421,7 +421,7 @@ const TECH_MOBILE_MAP_LAYERS: MapLayers = {
 // ============================================
 const FINANCE_PANELS: Record<string, PanelConfig> = {
   map: { name: 'Global Markets Map', enabled: true, priority: 1 },
-  'live-news': { name: 'Market Headlines', enabled: true, priority: 1 },
+  'live-news': { name: 'Live Market TV', enabled: true, priority: 1 },
   'live-webcams': { name: 'Live Webcams', enabled: true, priority: 2 },
   'windy-webcams': { name: 'Windy Live Webcam', enabled: false, priority: 2 },
   insights: { name: 'AI Market Insights', enabled: true, priority: 1 },

@@ -77,6 +77,15 @@ const FULL_LIVE_CHANNELS: LiveChannel[] = [
   { id: 'aljazeera', name: 'AlJazeera', handle: '@AlJazeeraEnglish', fallbackVideoId: 'gCNeDWCI0vo', useFallbackOnly: true },
 ];
 
+// Finance variant: market-moving live coverage. Keep this intentionally narrow;
+// RSS Markets News carries attributable headlines and links, while this panel
+// supplies the genuinely live continuous stream.
+const FINANCE_LIVE_CHANNELS: LiveChannel[] = [
+  { id: 'bloomberg', name: 'Bloomberg Markets', handle: '@markets', fallbackVideoId: 'iEpJwprxDdk' },
+  { id: 'yahoo', name: 'Yahoo Finance', handle: '@YahooFinance', fallbackVideoId: 'KQp-e_XQnDE' },
+  { id: 'cnbc', name: 'CNBC', handle: '@CNBC', fallbackVideoId: '9NyxcX3rhQs' },
+];
+
 // Tech variant: Tech & business channels
 const TECH_LIVE_CHANNELS: LiveChannel[] = [
   { id: 'bloomberg', name: 'Bloomberg', handle: '@markets', fallbackVideoId: 'iEpJwprxDdk' },
@@ -204,7 +213,13 @@ export const OPTIONAL_CHANNEL_REGIONS: { key: string; labelKey: string; channelI
   ..._REGION_ENTRIES,
 ];
 
-const DEFAULT_LIVE_CHANNELS = SITE_VARIANT === 'tech' ? TECH_LIVE_CHANNELS : SITE_VARIANT === 'happy' ? [] : FULL_LIVE_CHANNELS;
+const DEFAULT_LIVE_CHANNELS = SITE_VARIANT === 'finance'
+  ? FINANCE_LIVE_CHANNELS
+  : SITE_VARIANT === 'tech'
+    ? TECH_LIVE_CHANNELS
+    : SITE_VARIANT === 'happy'
+      ? []
+      : FULL_LIVE_CHANNELS;
 
 /** Default channel list for the current variant (for restore in channel management). */
 export function getDefaultLiveChannels(): LiveChannel[] {

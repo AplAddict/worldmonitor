@@ -260,6 +260,9 @@ export const MISSION_PRESETS: readonly MissionPreset[] = [
     timeRange: '24h',
     panels: [
       'map',
+      // Live Market TV is deliberately paired with the RSS Markets News panel:
+      // video is the real-time stream; RSS preserves attributable, scannable headlines.
+      'live-news',
       // Keep this desk decision-first and source-backed. Optional technical,
       // derivatives, macro and geopolitical panels remain available via Add
       // Panels, but are not forced open when their cache is unavailable.
