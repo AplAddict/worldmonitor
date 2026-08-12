@@ -108,6 +108,40 @@ test('fetch failure extends existing TTL and exits with graceful-failure code', 
   );
 });
 
+test('transient Redis publish exhaustion preserves last-good TTL and exits gracefully', async () => {
+  globalThis.fetch = async (url, opts = {}) => {
+    const body = opts?.body ? (() => { try { return JSON.parse(opts.body); } catch { return opts.body; } })() : null;
+    recordedCalls.push({ url: String(url), method: opts?.method || 'GET', body });
+    // Fail only atomicPublish's staging write. Lock, release, and cleanup calls
+    // remain available so this reaches runSeed's post-retry recovery branch.
+    if (Array.isArray(body) && body[0] === 'SET' && String(body[1]).includes('test:publish-fail:v1:staging:')) {
+      const err = new TypeError('fetch failed');
+      err.cause = Object.assign(new Error('read ECONNRESET'), { code: 'ECONNRESET' });
+      throw err;
+    }
+    if (Array.isArray(body) && Array.isArray(body[0])) {
+      return new Response(JSON.stringify(body.map(() => ({ result: 0 }))), { status: 200 });
+    }
+    return new Response(JSON.stringify({ result: 'OK' }), { status: 200 });
+  };
+
+  const exitCode = await runWithExitTrap(() =>
+    runSeed('test', 'publish-fail', 'test:publish-fail:v1', async () => ({ items: [{ id: 1 }] }), {
+      validateFn: (d) => d?.items?.length > 0,
+      ttlSeconds: 3600,
+      extraKeys: [{ key: 'test:publish-fail:extra' }],
+    }),
+  );
+
+  assert.equal(exitCode, GRACEFUL_FETCH_FAILURE_EXIT_CODE);
+  assert.deepEqual(
+    new Set(expireKeys()),
+    new Set(['test:publish-fail:v1', 'seed-meta:test:publish-fail', 'test:publish-fail:extra']),
+    'transient publish exhaustion must retain last-good canonical, metadata, and extra-key TTLs',
+  );
+  assert.equal(countMetaSets('publish-fail'), 0, 'publish failure must not claim a fresh successful seed');
+});
+
 test('validation failure with emptyDataIsFailure:true does NOT refresh seed-meta', async () => {
   await runWithExitTrap(() =>
     runSeed('test', 'empty-fail', 'test:empty-fail:v1', async () => ({ items: [] }), {

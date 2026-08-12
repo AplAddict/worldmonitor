@@ -1635,6 +1635,26 @@ export async function runSeed(domain, resource, canonicalKey, fetchFn, opts = {}
     process.exit(0);
   } catch (err) {
     await releaseLock(`${domain}:${resource}`, runId);
+
+    // A fetched payload is not a reason to discard last-good data when the
+    // cache transport itself has a transient outage. atomicPublish already
+    // retries its complete staging/canonical write unit; after those retries
+    // are exhausted, retain the existing canonical, metadata, and bootstrap
+    // keys for their normal TTL and return the reserved degraded exit code.
+    // This keeps source health honest (no fresh seed-meta is written) while
+    // preventing a short Upstash reset from being misclassified as an
+    // unhandled seeder crash.
+    if (isTransientRedisError(err)) {
+      const ttl = ttlSeconds || 600;
+      const keys = [canonicalKey, `seed-meta:${domain}:${resource}`];
+      if (extraKeys) keys.push(...extraKeys.map((ek) => ek.key));
+      await extendExistingTtl(keys, ttl).catch((ttlErr) => {
+        console.warn(`  WARNING: could not extend last-good TTL after publish failure: ${ttlErr?.message || ttlErr}`);
+      });
+      console.error(`  PUBLISH FAILED GRACEFULLY: ${err.message || err} — last-good cache retained`);
+      process.exit(GRACEFUL_FETCH_FAILURE_EXIT_CODE);
+    }
+
     throw err;
   }
 }

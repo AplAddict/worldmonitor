@@ -29,5 +29,5 @@ test('Docker nginx injects LOCAL_API_TOKEN on private sidecar proxy requests', (
 test('Docker healthcheck continues through nginx so the injected token is applied', () => {
   const dockerfile = readProjectFile('Dockerfile');
 
-  assert.match(dockerfile, /HEALTHCHECK[\s\S]*wget -qO- http:\/\/localhost:8080\/api\/health/);
+  assert.match(dockerfile, /HEALTHCHECK[\s\S]*wget -qO- http:\/\/(?:localhost|127\.0\.0\.1):8080\/api\/health/);
 });

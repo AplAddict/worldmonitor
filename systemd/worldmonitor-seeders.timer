@@ -1,0 +1,11 @@
+[Unit]
+Description=Run World Monitor cache refresh every fifteen minutes
+
+[Timer]
+OnCalendar=*:0/15
+Persistent=true
+RandomizedDelaySec=2m
+Unit=worldmonitor-seeders.service
+
+[Install]
+WantedBy=timers.target
