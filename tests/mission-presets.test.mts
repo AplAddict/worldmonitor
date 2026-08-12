@@ -599,6 +599,7 @@ describe('mission preset definitions', () => {
       MISSION_PRESETS.map((preset) => preset.id),
       [
         'crisis-desk',
+        'israel-watch',
         'supply-chain-risk',
         'energy-security',
         'osint-newsroom',
@@ -645,6 +646,16 @@ describe('mission preset definitions', () => {
   it('returns null for unknown preset ids', () => {
     assert.equal(getMissionPreset('missing'), null);
     assert.equal(getMissionPreset(null), null);
+  });
+
+  it('defines Israel Watch as a precise Israel/Levant operational desk', () => {
+    const preset = getMissionPreset('israel-watch');
+    assert.ok(preset);
+    assert.deepEqual(preset.center, { lat: 31.5, lon: 35.0, zoom: 5.2 });
+    assert.equal(preset.timeRange, '24h');
+    assert.deepEqual(preset.panels.slice(0, 5), ['map', 'live-news', 'middleeast', 'intel', 'gdelt-intel']);
+    assert.ok(preset.layers.includes('conflicts'));
+    assert.ok(preset.layers.includes('flights'));
   });
 });
 

@@ -6,6 +6,10 @@ loadEnvFile(import.meta.url);
 
 const CANONICAL_KEY = 'wildfire:fires:v1';
 const FIRMS_SOURCES = ['VIIRS_SNPP_NRT', 'VIIRS_NOAA20_NRT', 'VIIRS_NOAA21_NRT'];
+// Keep ample margin below _seed-utils' 5 MiB Redis limit. FIRMS can surge
+// during wildfire season; retain the newest detections rather than failing the
+// entire refresh and leaving the previous cache stale.
+const MAX_PAYLOAD_BYTES = 4 * 1024 * 1024;
 
 const MONITORED_REGIONS = {
   'Ukraine': '22,44,40,53',
@@ -69,6 +73,27 @@ async function fetchRegionSource(apiKey, regionName, bbox, source) {
   throw lastErr;
 }
 
+function capFireDetections(fireDetections) {
+  // The shared publisher wraps this payload in a small contract envelope. Reserve
+  // ~256 KiB for that metadata and find the largest newest-first prefix that fits.
+  const newestFirst = [...fireDetections].sort((a, b) => b.detectedAt - a.detectedAt);
+  const payloadBytesFor = (count) => Buffer.byteLength(
+    JSON.stringify({ fireDetections: newestFirst.slice(0, count) }),
+    'utf8',
+  );
+  if (payloadBytesFor(newestFirst.length) <= MAX_PAYLOAD_BYTES) return newestFirst;
+
+  let low = 0;
+  let high = newestFirst.length;
+  while (low < high) {
+    const mid = Math.ceil((low + high) / 2);
+    if (payloadBytesFor(mid) <= MAX_PAYLOAD_BYTES) low = mid;
+    else high = mid - 1;
+  }
+  console.warn(`  [FIRMS] payload capped: retained ${low}/${newestFirst.length} newest detections to stay within the Redis size limit`);
+  return newestFirst.slice(0, low);
+}
+
 async function fetchAllRegions(apiKey) {
   const entries = Object.entries(MONITORED_REGIONS);
   const seen = new Set();
@@ -113,7 +138,7 @@ async function fetchAllRegions(apiKey) {
     console.log(`  ${source}: ${fireDetections.length} total (${fulfilled} ok, ${failed} failed)`);
   }
 
-  return { fireDetections, pagination: undefined };
+  return { fireDetections: capFireDetections(fireDetections), pagination: undefined };
 }
 
 export function declareRecords(data) {

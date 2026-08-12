@@ -99,7 +99,6 @@ import { DataLoaderManager } from '@/app/data-loader';
 import { EventHandlerManager } from '@/app/event-handlers';
 import { replaceRawI18nKeyPlaceholders } from '@/app/i18n-raw-key-healer';
 import { resolveUserRegion, resolvePreciseUserCoordinates, type PreciseCoordinates } from '@/utils/user-location';
-import { showProBanner } from '@/components/ProBanner';
 import { initAuthState, subscribeAuthState } from '@/services/auth-state';
 import {
   CLOUD_PREFS_APPLIED_EVENT,
@@ -730,47 +729,18 @@ export class App {
 
       console.log('[App] Loaded panel settings from storage:', Object.entries(panelSettings).filter(([_, v]) => !v.enabled).map(([k]) => k));
 
-      // One-time migration: reorder panels for existing users (v1.9 panel layout)
+      // Historical migration marker only. Earlier builds silently promoted
+      // intelligence panels during an upgrade; mission presets now own
+      // intentional ordering, and existing user ordering is preserved.
       const PANEL_ORDER_MIGRATION_KEY = 'worldmonitor-panel-order-v1.9';
       if (!localStorage.getItem(PANEL_ORDER_MIGRATION_KEY)) {
-        const savedOrder = localStorage.getItem(PANEL_ORDER_KEY);
-        if (savedOrder) {
-          try {
-            const order: string[] = JSON.parse(savedOrder);
-            const priorityPanels = ['insights', 'strategic-posture', 'cii', 'strategic-risk'];
-            const filtered = order.filter(k => !priorityPanels.includes(k) && k !== 'live-news');
-            const liveNewsIdx = order.indexOf('live-news');
-            const newOrder = liveNewsIdx !== -1 ? ['live-news'] : [];
-            newOrder.push(...priorityPanels.filter(p => order.includes(p)));
-            newOrder.push(...filtered);
-            localStorage.setItem(PANEL_ORDER_KEY, JSON.stringify(newOrder));
-            console.log('[App] Migrated panel order to v1.9 layout');
-          } catch {
-            // Invalid saved order, will use defaults
-          }
-        }
         localStorage.setItem(PANEL_ORDER_MIGRATION_KEY, 'done');
       }
 
-      // Tech variant migration: move insights to top (after live-news)
+      // Same policy for the old Tech-only order rewrite.
       if (currentVariant === 'tech') {
         const TECH_INSIGHTS_MIGRATION_KEY = 'worldmonitor-tech-insights-top-v1';
         if (!localStorage.getItem(TECH_INSIGHTS_MIGRATION_KEY)) {
-          const savedOrder = localStorage.getItem(PANEL_ORDER_KEY);
-          if (savedOrder) {
-            try {
-              const order: string[] = JSON.parse(savedOrder);
-              const filtered = order.filter(k => k !== 'insights' && k !== 'live-news');
-              const newOrder: string[] = [];
-              if (order.includes('live-news')) newOrder.push('live-news');
-              if (order.includes('insights')) newOrder.push('insights');
-              newOrder.push(...filtered);
-              localStorage.setItem(PANEL_ORDER_KEY, JSON.stringify(newOrder));
-              console.log('[App] Tech variant: Migrated insights panel to top');
-            } catch {
-              // Invalid saved order, will use defaults
-            }
-          }
           localStorage.setItem(TECH_INSIGHTS_MIGRATION_KEY, 'done');
         }
       }
@@ -1332,7 +1302,6 @@ export class App {
     // downstream code (e.g. mobileGeoCoords→state.map.setCenter) reads ctx.map.
     await this.panelLayout.init();
     this.eventHandlers.setupSearchControls();
-    showProBanner(this.state.container);
     this.updateConnectivityUi();
     window.addEventListener('online', this.handleConnectivityChange);
     window.addEventListener('offline', this.handleConnectivityChange);

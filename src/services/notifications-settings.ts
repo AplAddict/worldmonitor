@@ -19,7 +19,6 @@ import {
   type DigestMode,
 } from '@/services/notification-channels';
 import { getCurrentClerkUser } from '@/services/clerk';
-import { hasTier } from '@/services/entitlements';
 import { SITE_VARIANT } from '@/config/variant';
 import { mountCountryChipPicker, loadFollowedCountriesSafe, type CountryChipPickerHandle } from '@/utils/country-chip-picker';
 import { setTrustedHtml, trustedHtml } from '@/utils/dom-utils';
@@ -68,7 +67,7 @@ function appendNotificationError(rowEl: HTMLElement, message: string): void {
 }
 
 export function renderNotificationsSettings(host: NotificationsSettingsHost): NotificationsSettingsResult {
-  const isPro = !!host.isSignedIn && hasTier(1);
+  const isPro = true;
   const preselectCountry = normalizePreselectCountry(host.preselectCountry);
 
   let html = '';

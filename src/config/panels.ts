@@ -2,10 +2,6 @@ import type { PanelConfig, MapLayers, DataSourceId } from '@/types';
 import { SITE_VARIANT } from './variant';
 // boundary-ignore: isDesktopRuntime is a pure env probe with no service dependencies
 import { isDesktopRuntime } from '@/services/runtime';
-// boundary-ignore: getSecretState is a pure env/keychain probe with no service dependencies
-import { getSecretState } from '@/services/runtime-config';
-// boundary-ignore: isEntitled is a pure state check with no side effects
-import { isEntitled } from '@/services/entitlements';
 
 const _desktop = isDesktopRuntime();
 
@@ -1214,17 +1210,8 @@ export function restoreFreeMapPanelAccess(
  * Returns true if the current user is entitled to enable/view this panel.
  * Mirrors the entitlement checks in panel-layout.ts (single source of truth).
  */
-export function isPanelEntitled(key: string, config: PanelConfig, isPro = false): boolean {
-  if (!config.premium) return true;
-  // Dodo entitlements unlock all premium panels
-  if (isEntitled()) return true;
-  const apiKeyPanels = ['stock-analysis', 'stock-backtest', 'daily-market-brief', 'market-implications', 'regional-intelligence', 'deduction', 'chat-analyst', 'wsb-ticker-scanner', 'trade-policy'];
-  if (apiKeyPanels.includes(key)) {
-    return getSecretState('WORLDMONITOR_API_KEY').present || isPro;
-  }
-  if (config.premium === 'locked') {
-    return isDesktopRuntime();
-  }
+export function isPanelEntitled(_key: string, _config: PanelConfig, _isPro = false): boolean {
+  // Authentik is the sole access boundary for this self-hosted dashboard.
   return true;
 }
 

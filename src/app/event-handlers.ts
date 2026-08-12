@@ -1070,7 +1070,15 @@ export class EventHandlerManager implements AppModule {
     this.ctx.unifiedSettings?.refreshPanelToggles();
     this.ctx.map?.setLayers(mapLayers);
     this.applyMissionMapLayerTransitions(previousMapLayers, mapLayers);
-    this.ctx.map?.setView(applied.preset.view as MapView, applied.preset.zoom);
+    if (applied.preset.center) {
+      this.ctx.map?.setCenter(
+        applied.preset.center.lat,
+        applied.preset.center.lon,
+        applied.preset.center.zoom ?? applied.preset.zoom,
+      );
+    } else {
+      this.ctx.map?.setView(applied.preset.view as MapView, applied.preset.zoom);
+    }
     this.ctx.map?.setTimeRange(applied.preset.timeRange);
     this.callbacks.mountLiveNewsIfReady?.();
     this.callbacks.syncDataFreshnessWithLayers();

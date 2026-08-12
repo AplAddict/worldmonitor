@@ -15,6 +15,7 @@ export const MISSION_PRESET_DISMISSED_KEY = 'worldmonitor-mission-preset-dismiss
 
 export type MissionPresetId =
   | 'crisis-desk'
+  | 'israel-watch'
   | 'supply-chain-risk'
   | 'energy-security'
   | 'osint-newsroom'
@@ -33,6 +34,8 @@ export interface MissionPreset {
   icon: string;
   view: MissionMapView;
   zoom?: number;
+  /** Exact focus for a country/area mission; takes precedence over the broad view preset. */
+  center?: { lat: number; lon: number; zoom?: number };
   timeRange: MissionTimeRange;
   panels: string[];
   layers: Array<keyof MapLayers>;
@@ -89,6 +92,44 @@ export const MISSION_PRESETS: readonly MissionPreset[] = [
       'weather',
       'natural',
       'ciiChoropleth',
+    ],
+  },
+  {
+    id: 'israel-watch',
+    label: 'Israel Watch',
+    shortLabel: 'Israel',
+    description: 'Israel, the Levant, regional escalation, airspace, and verified reporting.',
+    icon: '✦',
+    view: 'mena',
+    zoom: 5.2,
+    center: { lat: 31.5, lon: 35.0, zoom: 5.2 },
+    timeRange: '24h',
+    panels: [
+      'map',
+      'live-news',
+      'middleeast',
+      'intel',
+      'gdelt-intel',
+      'insights',
+      'strategic-posture',
+      'strategic-risk',
+      'security-advisories',
+      'airline-intel',
+      'cascade',
+      'military-correlation',
+      'escalation-correlation',
+    ],
+    layers: [
+      'conflicts',
+      'hotspots',
+      'iranAttacks',
+      'military',
+      'bases',
+      'nuclear',
+      'sanctions',
+      'outages',
+      'weather',
+      'flights',
     ],
   },
   {

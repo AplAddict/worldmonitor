@@ -1406,7 +1406,7 @@ export class MapPopup {
     // available — a zero-state fill (partial portwatch) means the per-id
     // history key is also empty, so there's nothing to fetch.
     const hasChart = !!cp && cp.transitSummary?.dataAvailable !== false;
-    const isPro = hasPremiumAccess(getAuthState());
+    const isPro = true;
     const sectors = CHOKEPOINT_HS2_SECTORS[waterway.chokepointId];
 
     // Sector mix: only show the compact SVG ring for free users (PRO users get the full HS2RingChart below)
