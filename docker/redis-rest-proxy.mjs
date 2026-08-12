@@ -38,8 +38,12 @@ function checkAuth(req) {
   return crypto.timingSafeEqual(Buffer.from(provided), Buffer.from(TOKEN));
 }
 
-// Command safety: allowlist of expected Redis commands.
-// Blocks dangerous operations like FLUSHALL, CONFIG SET, EVAL, DEBUG, SLAVEOF.
+// Command safety: allowlist of expected Redis commands. The private bridge
+// is token-protected and only published on loopback. @upstash/ratelimit uses
+// SCRIPT LOAD/EVALSHA and can fall back to EVAL after a Redis restart. Those
+// commands are enabled only because this bridge backs that trusted application;
+// arbitrary callers cannot reach it without the per-deployment bearer token.
+// Blocks dangerous operations like FLUSHALL, CONFIG SET, DEBUG, SLAVEOF.
 const ALLOWED_COMMANDS = new Set([
   'GET', 'SET', 'DEL', 'MGET', 'MSET', 'SCAN',
   'TTL', 'EXPIRE', 'PEXPIRE', 'EXISTS', 'TYPE',
@@ -50,6 +54,7 @@ const ALLOWED_COMMANDS = new Set([
   'GEOADD', 'GEOSEARCH', 'GEOPOS', 'GEODIST',
   'INCR', 'DECR', 'INCRBY', 'DECRBY',
   'PING', 'ECHO', 'INFO', 'DBSIZE',
+  'SCRIPT', 'EVALSHA', 'EVAL',
   'PUBLISH', 'SUBSCRIBE',
   'SETNX', 'SETEX', 'PSETEX', 'GETSET',
   'APPEND', 'STRLEN',
