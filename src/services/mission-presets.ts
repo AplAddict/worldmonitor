@@ -14,6 +14,7 @@ export const MISSION_PRESET_STORAGE_KEY = 'worldmonitor-mission-preset-v1';
 export const MISSION_PRESET_DISMISSED_KEY = 'worldmonitor-mission-preset-dismissed-v1';
 
 export type MissionPresetId =
+  | 'world-watch'
   | 'crisis-desk'
   | 'israel-watch'
   | 'supply-chain-risk'
@@ -55,6 +56,62 @@ export interface ResetMissionPresetState {
 }
 
 export const MISSION_PRESETS: readonly MissionPreset[] = [
+  {
+    id: 'world-watch',
+    label: 'World Watch',
+    shortLabel: 'World',
+    description: 'Broad self-hosted OSINT desk: live reporting, conflict, maritime, cyber, climate, energy, and supply-chain signals.',
+    icon: 'W',
+    view: 'global',
+    zoom: 2.1,
+    timeRange: '24h',
+    // This is intentionally broad rather than an aggressive simplification.
+    // It restores an immediately useful all-domain starting desk while the
+    // focused missions remain available for deeper investigation.
+    panels: [
+      'map',
+      'live-news',
+      'intel',
+      'gdelt-intel',
+      'strategic-posture',
+      'strategic-risk',
+      'cii',
+      'cascade',
+      'military-correlation',
+      'supply-chain',
+      'energy-complex',
+      'security-advisories',
+      'cross-source-signals',
+      'satellite-fires',
+      'climate',
+      'displacement',
+      'airline-intel',
+      'live-webcams',
+      'markets',
+      'commodities',
+    ],
+    layers: [
+      'conflicts',
+      'hotspots',
+      'military',
+      'bases',
+      'ais',
+      'tradeRoutes',
+      'waterways',
+      'pipelines',
+      'cables',
+      'sanctions',
+      'outages',
+      'cyberThreats',
+      'weather',
+      'natural',
+      'fires',
+      'ucdpEvents',
+      'displacement',
+      'flights',
+      'iranAttacks',
+    ],
+  },
   {
     id: 'crisis-desk',
     label: 'Crisis Desk',

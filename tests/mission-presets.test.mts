@@ -598,6 +598,7 @@ describe('mission preset definitions', () => {
     assert.deepEqual(
       MISSION_PRESETS.map((preset) => preset.id),
       [
+        'world-watch',
         'crisis-desk',
         'israel-watch',
         'supply-chain-risk',
@@ -646,6 +647,19 @@ describe('mission preset definitions', () => {
   it('returns null for unknown preset ids', () => {
     assert.equal(getMissionPreset('missing'), null);
     assert.equal(getMissionPreset(null), null);
+  });
+
+  it('defines World Watch as a broad, evidence-first OSINT desk', () => {
+    const preset = getMissionPreset('world-watch');
+    assert.ok(preset);
+    assert.equal(preset.timeRange, '24h');
+    assert.deepEqual(preset.panels.slice(0, 5), ['map', 'live-news', 'intel', 'gdelt-intel', 'strategic-posture']);
+    for (const panel of ['supply-chain', 'energy-complex', 'security-advisories', 'cross-source-signals', 'live-webcams']) {
+      assert.ok(preset.panels.includes(panel), `World Watch is missing ${panel}`);
+    }
+    for (const layer of ['ais', 'tradeRoutes', 'pipelines', 'cyberThreats', 'flights', 'ucdpEvents']) {
+      assert.ok(preset.layers.includes(layer), `World Watch is missing ${layer}`);
+    }
   });
 
   it('defines Israel Watch as a precise Israel/Levant operational desk', () => {
