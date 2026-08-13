@@ -68,6 +68,7 @@ export type TechnicalSnapshot = {
 
 export type AiOverlay = {
   summary: string;
+  /** Backward-compatible wire field; always descriptive signal context, never a directive. */
   action: string;
   confidence: string;
   whyNow: string;
@@ -939,18 +940,18 @@ export function getFallbackOverlay(name: string, technical: TechnicalSnapshot, h
   const newsSummary = headlines.length > 0
     ? `Recent coverage is led by ${headlines[0]?.source || 'market press'}: ${headlines[0]?.title || 'no headline available'}`
     : 'No material recent headlines were pulled into the report.';
-  const actionMap: Record<Signal, string> = {
-    'Strong buy': 'Build or add on controlled pullbacks.',
-    'Buy': 'Accumulate selectively while the trend holds.',
-    'Hold': 'Keep exposure but wait for a cleaner entry or confirmation.',
-    'Watch': 'Stay patient until the setup improves.',
-    'Sell': 'Reduce exposure into strength.',
-    'Strong sell': 'Exit or avoid new long exposure.',
+  const signalContextMap: Record<Signal, string> = {
+    'Strong buy': 'Technical readings are strongly positive in the current observation window.',
+    'Buy': 'Technical readings are positive in the current observation window.',
+    'Hold': 'Technical readings are mixed in the current observation window.',
+    'Watch': 'Technical readings do not show a clear directional condition in the current observation window.',
+    'Sell': 'Technical readings are negative in the current observation window.',
+    'Strong sell': 'Technical readings are strongly negative in the current observation window.',
   };
   const confidence = technical.signalScore >= 75 ? 'High' : technical.signalScore >= 55 ? 'Medium' : 'Low';
   return {
     summary: `${name} screens as ${technical.signal.toLowerCase()} with a ${technical.trendStatus.toLowerCase()} setup and a ${technical.signalScore}/100 score.`,
-    action: actionMap[technical.signal],
+    action: signalContextMap[technical.signal],
     confidence,
     whyNow: `Price sits ${technical.biasMa5}% versus MA5, MACD is ${technical.macdStatus.toLowerCase()}, and RSI(12) is ${technical.rsi12}.`,
     technicalSummary,
@@ -974,7 +975,7 @@ async function buildAiOverlay(
     messages: [
       {
         role: 'system',
-        content: 'You are a disciplined stock analyst. Return strict JSON only with keys: summary, action, confidence, whyNow, technicalSummary, newsSummary, bullishFactors, riskFactors. Keep it concise, factual, and free of disclaimers.',
+        content: 'You are a disciplined market-data analyst. Return strict JSON only with keys: summary, signalContext, confidence, whyNow, technicalSummary, newsSummary, bullishFactors, riskFactors. Describe only the provided observable data. Do not recommend, direct, or imply buying, selling, holding, entering, exiting, sizing, targets, stops, or portfolio actions. Keep it concise and factual.',
       },
       {
         role: 'user',
@@ -1019,7 +1020,7 @@ async function buildAiOverlay(
     validate: (content) => {
       try {
         const parsed = JSON.parse(content) as Record<string, unknown>;
-        return typeof parsed.summary === 'string' && typeof parsed.action === 'string';
+        return typeof parsed.summary === 'string' && typeof parsed.signalContext === 'string';
       } catch {
         return false;
       }
@@ -1031,7 +1032,7 @@ async function buildAiOverlay(
   try {
     const parsed = JSON.parse(llm.content) as {
       summary?: string;
-      action?: string;
+      signalContext?: string;
       confidence?: string;
       whyNow?: string;
       technicalSummary?: string;
@@ -1042,7 +1043,9 @@ async function buildAiOverlay(
 
     return {
       summary: parsed.summary?.trim() || fallback.summary,
-      action: parsed.action?.trim() || fallback.action,
+      // Keep the legacy wire field deterministic: an LLM must never author a
+      // recommendation or an implied trade instruction for this read-only desk.
+      action: fallback.action,
       confidence: parsed.confidence?.trim() || fallback.confidence,
       whyNow: parsed.whyNow?.trim() || fallback.whyNow,
       technicalSummary: parsed.technicalSummary?.trim() || fallback.technicalSummary,
@@ -1086,12 +1089,10 @@ export function buildAnalysisResponse(params: {
     dividend,
   } = params;
   const analysisId = params.analysisId || `stock:${STOCK_ANALYSIS_ENGINE_VERSION}:${symbol}:${analysisAt}:${includeNews ? 'news' : 'core'}`;
-  const { stopLoss, takeProfit } = deriveTradeLevels(
-    technical.signal,
-    technical.currentPrice,
-    technical.supportLevels,
-    technical.resistanceLevels,
-  );
+  // This is a research-only response. Keep legacy fields so existing clients
+  // decode safely, but never turn technical levels into execution parameters.
+  const stopLoss = 0;
+  const takeProfit = 0;
 
   return {
     available: true,

@@ -195,13 +195,18 @@ export class MacroSignalsPanel extends Panel {
     const s = d.signals;
 
     const verdictClass = d.verdict === 'BUY' ? 'verdict-buy' : d.verdict === 'CASH' ? 'verdict-cash' : 'verdict-unknown';
+    const verdictText = d.verdict === 'BUY'
+      ? 'BTC-linked signal inputs are positive in the current observation window'
+      : d.verdict === 'CASH'
+        ? 'BTC-linked signal inputs are mixed or defensive in the current observation window'
+        : 'BTC-linked signal inputs are unavailable or inconclusive';
 
     const html = `
       <div class="macro-signals-container">
         <div class="macro-verdict ${verdictClass}">
           <span class="verdict-label">${t('components.macroSignals.overall')}</span>
           <span style="font-size:9px;background:rgba(247,147,26,0.15);color:#f7931a;border:1px solid rgba(247,147,26,0.3);padding:1px 5px;border-radius:3px;font-weight:700;letter-spacing:0.04em;vertical-align:middle">&#x20bf; BTC</span>
-          <span class="verdict-value">${d.verdict === 'BUY' ? t('components.macroSignals.verdict.buy') : d.verdict === 'CASH' ? t('components.macroSignals.verdict.cash') : escapeHtml(d.verdict)}</span>
+          <span class="verdict-value">${escapeHtml(verdictText)}</span>
           <span class="verdict-detail">${t('components.macroSignals.bullish', { count: String(d.bullishCount), total: String(d.totalCount) })}</span>
         </div>
         <div class="signals-grid">

@@ -249,7 +249,7 @@ export class StockAnalysisPanel extends Panel {
           <div style="border:1px solid var(--border);padding:8px"><div style="color:var(--text-dim);text-transform:uppercase;letter-spacing:0.08em">Volume</div><div style="margin-top:4px">${escapeHtml(item.volumeStatus)}</div></div>
         </div>
         ${this.renderDividendProfile(item)}
-        <div style="font-size:12px;line-height:1.55;color:var(--text)"><strong style="font-size:11px;text-transform:uppercase;letter-spacing:0.08em;color:var(--text-dim)">Action</strong><div style="margin-top:4px">${escapeHtml(item.action)}</div></div>
+        <div style="font-size:12px;line-height:1.55;color:var(--text)"><strong style="font-size:11px;text-transform:uppercase;letter-spacing:0.08em;color:var(--text-dim)">Signal Context</strong><div style="margin-top:4px">${escapeHtml(item.action)}</div></div>
         <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:12px">
           <div>
             <div style="font-size:11px;text-transform:uppercase;letter-spacing:0.08em;color:var(--text-dim)">Bullish Factors</div>

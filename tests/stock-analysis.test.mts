@@ -121,8 +121,10 @@ describe('analyzeStock handler', () => {
     assert.equal(response.newsSearched, true);
     assert.match(response.analysisId, /^stock:/);
     assert.ok(response.analysisAt > 0);
-    assert.ok(response.stopLoss > 0);
-    assert.ok(response.takeProfit > 0);
+    assert.equal(response.stopLoss, 0, 'research response must not prescribe a stop-loss');
+    assert.equal(response.takeProfit, 0, 'research response must not prescribe a profit target');
+    assert.match(response.action, /signal context|technical readings/i);
+    assert.doesNotMatch(response.action, /\b(build|add|accumulate|reduce|exit|avoid|buy|sell|hold|entry|trade)\b/i);
     assert.equal(response.headlines.length, 2);
     assert.match(response.summary, /apple/i);
     assert.ok(response.bullishFactors.length > 0);
