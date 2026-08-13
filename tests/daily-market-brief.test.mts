@@ -210,9 +210,30 @@ describe('buildDailyMarketBrief', () => {
     assert.equal(brief.fallback, false);
     assert.match(brief.title, /Daily Market Brief/);
     assert.match(brief.summary, /Apple leading/i);
-    assert.match(brief.actionPlan, /selective|Lean|Keep/i);
+    assert.match(brief.actionPlan, /tracked set|price strength|defensive/i);
     assert.match(brief.riskWatch, /headline|Microsoft|Apple/i);
-    assert.match(brief.items[0]?.note || '', /Headline driver/i);
+    assert.match(brief.items[0]?.note || '', /Headline context/i);
+  });
+
+  it('keeps deterministic market posture descriptive rather than giving trade instructions', async () => {
+    const cases = [
+      { markets: [{ ...markets[0]!, change: 2.2 }, { ...markets[1]!, change: 1.3 }], label: 'positive' },
+      { markets: [{ ...markets[0]!, change: -2.2 }, { ...markets[1]!, change: -1.3 }], label: 'negative' },
+      { markets: [{ ...markets[0]!, change: 0.2 }, { ...markets[1]!, change: -0.1 }], label: 'mixed' },
+    ];
+
+    for (const scenario of cases) {
+      const brief = await buildDailyMarketBrief({
+        markets: scenario.markets,
+        newsByCategory: { markets: [makeNewsItem(`Market posture ${scenario.label}`)] },
+        timezone: 'UTC',
+        now: new Date('2026-03-08T10:30:00.000Z'),
+        summarize: async () => null,
+      });
+      const visibleNarrative = [brief.actionPlan, brief.riskWatch, ...brief.items.map((item) => item.note)].join(' ').toLowerCase();
+      assert.doesNotMatch(visibleNarrative, /\b(trade|buy|sell|entry|entries|exposure|adding risk|size|pullback|chasing|averaging)\b/,
+        `${scenario.label} posture must remain observational, not an instruction`);
+    }
   });
 
   it('falls back to deterministic copy when summarization is unavailable', async () => {

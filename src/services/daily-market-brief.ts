@@ -265,13 +265,16 @@ function formatSignedPercent(value: number | null): string {
 
 function buildItemNote(change: number | null, relatedHeadline?: string): string {
   const stance = getStance(change);
+  // This panel is market observation, not a recommendation engine. Keep the
+  // deterministic fallback descriptive so an unavailable LLM cannot turn it
+  // into an implied action queue.
   const moveNote = stance === 'bullish'
-    ? 'Momentum is constructive; favor leaders over laggards.'
+    ? 'Positive price momentum is evident relative to the tracked set.'
     : stance === 'defensive'
-      ? 'Price action is under pressure; protect capital first.'
-      : 'Tape is balanced; wait for confirmation before pressing size.';
+      ? 'Negative price momentum is evident; downside follow-through remains a key observation.'
+      : 'Price action is balanced; directional confirmation is limited.';
   return relatedHeadline
-    ? `${moveNote} Headline driver: ${relatedHeadline}`
+    ? `${moveNote} Headline context: ${relatedHeadline}`
     : moveNote;
 }
 
@@ -300,17 +303,17 @@ function buildActionPlan(items: DailyMarketBriefItem[], headlineCount: number): 
 
   if (defensive > bullish) {
     return headlineCount > 0
-      ? 'Keep gross exposure light, wait for downside to stabilize, and let macro headlines clear before adding risk.'
-      : 'Keep exposure light and wait for price to reclaim short-term momentum before adding risk.';
+      ? 'The tracked set is broadly defensive; downside follow-through and macro headlines are the primary observations.'
+      : 'The tracked set is broadly defensive; short-term price momentum remains negative.';
   }
 
   if (bullish >= 2) {
     return headlineCount > 0
-      ? 'Lean into relative strength, but size entries around macro releases and company-specific headlines.'
-      : 'Lean into the strongest names on pullbacks and avoid chasing extended opening moves.';
+      ? 'Relative price strength is concentrated in the tracked set, alongside active macro and company-specific headlines.'
+      : 'Relative price strength is concentrated in the tracked set; opening moves may be extended.';
   }
 
-  return 'Stay selective, trade the cleanest relative-strength setups, and let index direction confirm before scaling.';
+  return 'The tracked set is mixed; index direction and breadth remain the key observations.';
 }
 
 function buildRiskWatch(items: DailyMarketBriefItem[], headlines: NewsItem[]): string {
