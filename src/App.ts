@@ -737,6 +737,33 @@ export class App {
         localStorage.setItem(PANEL_ORDER_MIGRATION_KEY, 'done');
       }
 
+      // Additive migration: a saved Stock Geek workspace predating the Catalyst
+      // Board otherwise preserves its old panel map/order forever. Only touch
+      // the active Stock Geek mission; other saved workspaces retain their setup.
+      const CATALYST_BOARD_MIGRATION_KEY = 'worldmonitor-stock-geek-catalyst-board-v1';
+      if (!localStorage.getItem(CATALYST_BOARD_MIGRATION_KEY)) {
+        const activeMission = localStorage.getItem('worldmonitor-mission-preset-v1');
+        if (activeMission === 'macro-market-watch') {
+          const resolved = getEffectivePanelConfig('catalyst-board', currentVariant);
+          if (resolved) {
+            panelSettings['catalyst-board'] = { ...resolved, enabled: true };
+            saveToStorage(STORAGE_KEYS.panels, panelSettings);
+          }
+          try {
+            const storedOrder = JSON.parse(localStorage.getItem(PANEL_ORDER_KEY) || '[]');
+            const order = Array.isArray(storedOrder)
+              ? storedOrder.filter((key): key is string => typeof key === 'string' && key !== 'catalyst-board')
+              : [];
+            const holdingsIndex = order.indexOf('holdings-research');
+            order.splice(holdingsIndex >= 0 ? holdingsIndex + 1 : Math.min(3, order.length), 0, 'catalyst-board');
+            localStorage.setItem(PANEL_ORDER_KEY, JSON.stringify(order));
+          } catch {
+            // A malformed user preference is handled by the normal layout fallback.
+          }
+        }
+        localStorage.setItem(CATALYST_BOARD_MIGRATION_KEY, 'done');
+      }
+
       // Same policy for the old Tech-only order rewrite.
       if (currentVariant === 'tech') {
         const TECH_INSIGHTS_MIGRATION_KEY = 'worldmonitor-tech-insights-top-v1';
