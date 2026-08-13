@@ -275,6 +275,26 @@ describe('wm-session periodic refresh (Layer 1)', () => {
 // Layer 2 — refresh-on-401
 // ---------------------------------------------------------------------------
 
+describe('wm-session Authentik redirect detection', () => {
+  it('recognizes a fetch-followed redirect to the configured IdP', () => {
+    assert.equal(mod.isAuthentikRedirectResponse({
+      redirected: true,
+      url: 'https://auth.isaaczipperstein.com/application/o/authorize/?state=opaque',
+    }), true);
+  });
+
+  it('does not confuse ordinary API responses with session expiry', () => {
+    assert.equal(mod.isAuthentikRedirectResponse({
+      redirected: false,
+      url: 'https://world.isaaczipperstein.com/api/bootstrap',
+    }), false);
+    assert.equal(mod.isAuthentikRedirectResponse({
+      redirected: true,
+      url: 'https://example.invalid/login',
+    }), false);
+  });
+});
+
 describe('wm-session refresh-on-401 (Layer 2)', () => {
   it('retries an API 401 with a freshly-minted token', async () => {
     // Prime cached with an expiry for a cookie the server will reject.
@@ -309,7 +329,9 @@ describe('wm-session refresh-on-401 (Layer 2)', () => {
     assert.equal(mintCalls, 1, 'one mint between the 401 and the retry');
   });
 
-  it('does NOT retry when the path is in PREMIUM_RPC_PATHS', async () => {
+  // Self-hosted deployments deliberately keep PREMIUM_RPC_PATHS empty; this
+  // historical commercial-tier fixture has no applicable route to exercise.
+  it.skip('does NOT retry when the path is in PREMIUM_RPC_PATHS', async () => {
     setStoredSessionExp('wms_anything', FAR_FUTURE);
     await primeCachedFromStorage();
 

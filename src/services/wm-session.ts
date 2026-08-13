@@ -32,6 +32,7 @@ let inflight: Promise<boolean> | null = null;
 let interceptorInstalled = false;
 let nativeSessionFetch: typeof fetch | null = null;
 let retryRejectedWarned = false;
+let reauthenticationRedirectStarted = false;
 
 function isFresh(s: StoredSession | null): s is StoredSession {
   return !!s && s.exp - REFRESH_MARGIN_MS > Date.now();
@@ -168,6 +169,29 @@ export function isApiCallTarget(url: string, apiOrigin: string): boolean {
   return parsed.origin === apiOrigin && parsed.pathname.startsWith('/api/');
 }
 
+// Authentik protects this whole origin. When a browser tab's proxy session
+// expires, fetch follows the proxy's 302 to the IdP and resolves with login
+// HTML (often HTTP 200), not a 401. API callers then parse/fail silently and
+// the dashboard looks frozen. Recognize only the known IdP/outpost URL shape.
+export function isAuthentikRedirectResponse(response: Pick<Response, 'redirected' | 'url'>): boolean {
+  if (!response.redirected) return false;
+  try {
+    const target = new URL(response.url);
+    return target.hostname === 'auth.isaaczipperstein.com'
+      || target.pathname.startsWith('/outpost.goauthentik.io/');
+  } catch {
+    return false;
+  }
+}
+
+function beginReauthentication(): void {
+  if (reauthenticationRedirectStarted || typeof window === 'undefined') return;
+  reauthenticationRedirectStarted = true;
+  // Reloading the protected document (rather than navigating to an API URL)
+  // sends the user through Authentik and returns them to the dashboard.
+  window.location.reload();
+}
+
 // If a caller already set Authorization / X-WorldMonitor-Key / X-Api-Key, we
 // don't override — Clerk Bearer JWT and explicit user keys still take
 // precedence over the anonymous session token.
@@ -252,6 +276,15 @@ export function installWmSessionFetchInterceptor(): void {
     };
 
     const resp = await sendWith(headers, input);
+
+    // Reverse-proxy authentication redirects an expired browser session to the
+    // IdP. fetch follows that redirect, so this is typically a 200 HTML page,
+    // not a 401. Restart the protected document flow once instead of letting
+    // every widget consume login HTML and leaving the desk apparently frozen.
+    if (isAuthentikRedirectResponse(resp)) {
+      beginReauthentication();
+      return resp;
+    }
 
     // Layer 2 — refresh-on-401. A single transient blip (HMAC-key rotation,
     // expiry race, server-side cache flap) shouldn't strand the tab. If we
