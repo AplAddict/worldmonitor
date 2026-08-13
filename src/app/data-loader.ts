@@ -1375,6 +1375,19 @@ export class DataLoaderManager implements AppModule {
       enabledNewsCategoryKeys(this.ctx.newsPanels, this.ctx.panels, this.ctx.panelSettings, Object.keys(CANONICAL_FEEDS)),
     );
 
+    // Catalyst Board is deliberately not a generic RSS panel; it derives an
+    // attributable research lane from the finance market feed. On hosts whose
+    // active variant is not finance, add that bounded category explicitly so
+    // the board never renders an empty shell solely because its source feed
+    // was not part of the host's default news preset.
+    const catalystPanelEnabled = this.ctx.panelSettings['catalyst-board']?.enabled === true;
+    if (catalystPanelEnabled && !categories.some(({ key }) => key === 'markets')) {
+      const marketFeeds = CANONICAL_FEEDS.markets;
+      if (Array.isArray(marketFeeds) && marketFeeds.length > 0) {
+        categories.push({ key: 'markets', feeds: marketFeeds, isCustom: true });
+      }
+    }
+
     const maxCategoryConcurrency = SITE_VARIANT === 'tech' ? 4 : 5;
     const categoryConcurrency = Math.max(1, Math.min(maxCategoryConcurrency, categories.length));
     const newsPass = await runNewsLoadPass(
