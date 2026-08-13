@@ -764,6 +764,58 @@ export class App {
         localStorage.setItem(CATALYST_BOARD_MIGRATION_KEY, 'done');
       }
 
+      // Additive migration: Stock Geek is a market desk. Existing saved layouts
+      // can otherwise retain a hidden Live Market TV panel, place RSS news far
+      // below the fold, and keep the global-news channel lineup. Restrict this
+      // to the active Stock Geek mission and preserve deliberately customized
+      // live channels.
+      const STOCK_GEEK_LIVE_SURFACES_MIGRATION_KEY = 'worldmonitor-stock-geek-live-surfaces-v1';
+      if (!localStorage.getItem(STOCK_GEEK_LIVE_SURFACES_MIGRATION_KEY)) {
+        const activeMission = localStorage.getItem('worldmonitor-mission-preset-v1');
+        if (activeMission === 'macro-market-watch') {
+          for (const key of ['live-news', 'markets-news'] as const) {
+            const resolved = getEffectivePanelConfig(key, currentVariant);
+            if (resolved) panelSettings[key] = { ...resolved, enabled: true };
+          }
+          saveToStorage(STORAGE_KEYS.panels, panelSettings);
+
+          try {
+            const storedOrder = JSON.parse(localStorage.getItem(PANEL_ORDER_KEY) || '[]');
+            const remainder = Array.isArray(storedOrder)
+              ? storedOrder.filter((key): key is string => typeof key === 'string' && key !== 'live-news' && key !== 'markets-news')
+              : [];
+            localStorage.setItem(PANEL_ORDER_KEY, JSON.stringify(['live-news', 'markets-news', ...remainder]));
+
+            const bottomSetKey = `${PANEL_ORDER_KEY}-bottom-set`;
+            const storedBottomSet = JSON.parse(localStorage.getItem(bottomSetKey) || '[]');
+            const bottomSet = Array.isArray(storedBottomSet)
+              ? storedBottomSet.filter((key): key is string => typeof key === 'string' && key !== 'live-news' && key !== 'markets-news')
+              : [];
+            localStorage.setItem(bottomSetKey, JSON.stringify(bottomSet));
+          } catch {
+            // Malformed preference data is handled by the normal layout fallback.
+          }
+
+          // Replace only the untouched global default TV lineup. A user-added or
+          // customized lineup remains theirs; Stock Geek's defaults are Bloomberg
+          // Markets, Yahoo Finance, and CNBC.
+          try {
+            const rawChannels = localStorage.getItem(STORAGE_KEYS.liveChannels);
+            const parsed = rawChannels ? JSON.parse(rawChannels) as { order?: unknown } : null;
+            const order = Array.isArray(parsed?.order) ? parsed.order : [];
+            const globalDefaults = ['bloomberg', 'sky', 'euronews', 'dw', 'cnbc', 'cnn', 'france24', 'alarabiya', 'aljazeera'];
+            const isUntouchedGlobalDefaults = order.length === globalDefaults.length && order.every((id, index) => id === globalDefaults[index]);
+            if (!rawChannels || isUntouchedGlobalDefaults) {
+              localStorage.setItem(STORAGE_KEYS.liveChannels, JSON.stringify({ order: ['bloomberg', 'yahoo', 'cnbc'] }));
+              localStorage.removeItem(STORAGE_KEYS.activeChannel);
+            }
+          } catch {
+            // Keep a malformed or inaccessible channel preference untouched.
+          }
+        }
+        localStorage.setItem(STOCK_GEEK_LIVE_SURFACES_MIGRATION_KEY, 'done');
+      }
+
       // Same policy for the old Tech-only order rewrite.
       if (currentVariant === 'tech') {
         const TECH_INSIGHTS_MIGRATION_KEY = 'worldmonitor-tech-insights-top-v1';

@@ -663,7 +663,7 @@ describe('mission preset definitions', () => {
     assert.ok(preset);
     assert.equal(preset.timeRange, '24h');
     assert.deepEqual(preset.panels, [
-      'map', 'live-news', 'markets', 'holdings-research', 'catalyst-board', 'stock-analysis', 'daily-market-brief', 'markets-news',
+      'map', 'live-news', 'markets-news', 'markets', 'holdings-research', 'catalyst-board', 'stock-analysis', 'daily-market-brief',
       'earnings-calendar', 'heatmap', 'macro-signals',
     ]);
     assert.equal(preset.panels.includes('derivatives'), false);

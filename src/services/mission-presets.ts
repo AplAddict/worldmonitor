@@ -260,9 +260,10 @@ export const MISSION_PRESETS: readonly MissionPreset[] = [
     timeRange: '24h',
     panels: [
       'map',
-      // Live Market TV is deliberately paired with the RSS Markets News panel:
-      // video is the real-time stream; RSS preserves attributable, scannable headlines.
+      // Put the two live evidence surfaces at the front of the Stock Geek
+      // desk: continuous market TV first, then attributed/scannable RSS.
       'live-news',
+      'markets-news',
       // Keep this desk decision-first and source-backed. Optional technical,
       // derivatives, macro and geopolitical panels remain available via Add
       // Panels, but are not forced open when their cache is unavailable.
@@ -271,7 +272,6 @@ export const MISSION_PRESETS: readonly MissionPreset[] = [
       'catalyst-board',
       'stock-analysis',
       'daily-market-brief',
-      'markets-news',
       'earnings-calendar',
       'heatmap',
       'macro-signals',
