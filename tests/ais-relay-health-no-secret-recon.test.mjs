@@ -111,4 +111,18 @@ describe('ais-relay /health operator-monitoring contract preserved (#3812 / #381
     assert.match(body, /\boref:\s*\{/, 'must keep oref diagnostics');
     assert.match(body, /\bmemory:\s*\{/, 'must keep memory block');
   });
+
+  it('exposes a coarse maritime delivery state without disclosing provider details', async () => {
+    const body = await getHealthHandlerBody();
+    assert.match(body, /\bmaritime:\s*\{/, 'must expose the maritime delivery block');
+    assert.match(body, /\bdelivery:\s*maritimeDeliveryState\(\)/, 'must derive delivery from local relay state');
+    assert.doesNotMatch(body, /\bAISSTREAM_API_KEY\b/, 'public health must never disclose provider credentials');
+  });
+
+  it('keeps an unobserved relay idle rather than calling it disconnected', async () => {
+    const source = await readFile(new URL('../scripts/ais-relay.cjs', import.meta.url), 'utf8');
+    const helper = source.match(/function maritimeDeliveryState\(\) \{[\s\S]{0,600}?\n\}/)?.[0] || '';
+    assert.match(helper, /if \(messageCount === 0 && vessels\.size === 0\) return 'idle';/,
+      'a fresh, unobserved relay has no delivery evidence—not a provider failure');
+  });
 });
