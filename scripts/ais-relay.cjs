@@ -7588,6 +7588,21 @@ function getTankerReportsSnapshot(bbox) {
   return arr.slice(0, MAX_TANKER_REPORTS_PER_RESPONSE);
 }
 
+// Coarse public delivery state for operators. This intentionally describes only
+// observed local delivery—not API-key state, subscription geometry, or any
+// upstream provider detail that would widen the public /health attack surface.
+function maritimeDeliveryState() {
+  if (upstreamSocket?.readyState === WebSocket.OPEN) {
+    if (messageCount === 0 || vessels.size === 0) return 'connected_no_frames';
+    return 'live';
+  }
+  // The relay opens the AIS feed on an authenticated WebSocket client or
+  // snapshot request. Immediately after a clean boot it is deliberately idle,
+  // which is distinct from a feed that was active and then disconnected.
+  if (messageCount === 0 && vessels.size === 0) return 'idle';
+  return 'disconnected';
+}
+
 function buildSnapshot() {
   const now = Date.now();
   if (lastSnapshot && now - lastSnapshotAt < Math.floor(SNAPSHOT_INTERVAL_MS / 2)) {
@@ -9506,6 +9521,9 @@ const server = http.createServer(async (req, res) => {
       upstreamPaused,
       vessels: vessels.size,
       densityZones: Array.from(densityGrid.values()).filter(c => c.vessels.size >= 2).length,
+      maritime: {
+        delivery: maritimeDeliveryState(),
+      },
       telegram: {
         enabled: TELEGRAM_ENABLED,
         channels: telegramState.channels?.length || 0,
